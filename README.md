@@ -27,4 +27,4 @@ The `ref-impl/` directory contains reference implementations for various languag
 
 ## License
 
-*To be determined.*
+This project is dedicated to the public domain under the [CC0 1.0 Universal (CC0 1.0) Public Domain Dedication](LICENSE).
