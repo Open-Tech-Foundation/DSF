@@ -23,7 +23,6 @@ The `ref-impl/` directory contains reference implementations for various languag
 -   [TypeScript (Bun)](ref-impl/ts/)
 -   [Go](ref-impl/go/)
 
-*Note: Rust and C# implementations are planned but not yet included in this repository.*
 
 ## License
 
