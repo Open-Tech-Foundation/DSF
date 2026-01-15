@@ -2,407 +2,397 @@ package dsf
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
-type TokenKind int
+// DSFValue represents any valid DSF value
+type DSFValue interface{}
 
-const (
-	TokenEOF TokenKind = iota
-	TokenComment
-	TokenString
-	TokenConstructor
-	TokenBraceOpen
-	TokenBraceClose
-	TokenBracketOpen
-	TokenBracketClose
-	TokenColon
-	TokenComma
-	TokenNumber
-	TokenBoolT
-	TokenBoolF
-	TokenNullN
-	TokenKey
-)
-
-type Token struct {
-	Kind  TokenKind
-	Value string
-}
-
-type Lexer struct {
-	input string
+// Parser handles DSF parsing
+type Parser struct {
+	input []byte
 	pos   int
 }
 
-func NewLexer(input string) *Lexer {
-	return &Lexer{input: input}
-}
-
-func (l *Lexer) NextToken() (Token, error) {
-	l.skipWhitespace()
-	if l.pos >= len(l.input) {
-		return Token{Kind: TokenEOF}, nil
-	}
-
-	ch := l.input[l.pos]
-	if ch == '/' && l.peek() == '/' {
-		l.pos += 2
-		for l.pos < len(l.input) && l.input[l.pos] != '\n' {
-			l.pos++
-		}
-		return l.NextToken() // Skip comment
-	}
-
-	if ch == '{' {
-		l.pos++
-		return Token{Kind: TokenBraceOpen, Value: "{"}, nil
-	}
-	if ch == '}' {
-		l.pos++
-		return Token{Kind: TokenBraceClose, Value: "}"}, nil
-	}
-	if ch == '[' {
-		l.pos++
-		return Token{Kind: TokenBracketOpen, Value: "["}, nil
-	}
-	if ch == ']' {
-		l.pos++
-		return Token{Kind: TokenBracketClose, Value: "]"}, nil
-	}
-	if ch == ':' {
-		l.pos++
-		return Token{Kind: TokenColon, Value: ":"}, nil
-	}
-	if ch == ',' {
-		l.pos++
-		return Token{Kind: TokenComma, Value: ","}, nil
-	}
-	if ch == '`' {
-		start := l.pos
-		l.pos++
-		for l.pos < len(l.input) && l.input[l.pos] != '`' {
-			l.pos++
-		}
-		if l.pos >= len(l.input) {
-			return Token{}, errors.New("unterminated string")
-		}
-		l.pos++
-		return Token{Kind: TokenString, Value: l.input[start:l.pos]}, nil
-	}
-
-	// Try Number
-	if unicode.IsDigit(rune(ch)) || ch == '-' {
-		// We need to check if it's really a number or start of a key
-		// Actually identifiers can start with digits.
-		// If it looks like a number AND is followed by non-identifier char, it's a number.
-		numMatch := regexp.MustCompile(`^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?`).FindString(l.input[l.pos:])
-		if numMatch != "" {
-			endPos := l.pos + len(numMatch)
-			if endPos >= len(l.input) || !isIdentifierChar(rune(l.input[endPos])) {
-				l.pos = endPos
-				return Token{Kind: TokenNumber, Value: numMatch}, nil
-			}
-		}
-	}
-
-	// Try Identifier (Key or Bool or Null or Constructor)
-	if isIdentifierChar(rune(ch)) {
-		start := l.pos
-		for l.pos < len(l.input) && isIdentifierChar(rune(l.input[l.pos])) {
-			l.pos++
-		}
-		val := l.input[start:l.pos]
-		if l.pos < len(l.input) && l.input[l.pos] == '(' {
-			// Constructor
-			l.pos++
-			for l.pos < len(l.input) && l.input[l.pos] != ')' {
-				if unicode.IsSpace(rune(l.input[l.pos])) || l.input[l.pos] == '(' {
-					return Token{}, fmt.Errorf("invalid character in constructor payload: %c", l.input[l.pos])
-				}
-				l.pos++
-			}
-			if l.pos >= len(l.input) {
-				return Token{}, errors.New("unterminated constructor")
-			}
-			l.pos++
-			return Token{Kind: TokenConstructor, Value: l.input[start:l.pos]}, nil
-		}
-
-		if val == "T" {
-			return Token{Kind: TokenBoolT, Value: "T"}, nil
-		}
-		if val == "F" {
-			return Token{Kind: TokenBoolF, Value: "F"}, nil
-		}
-		if val == "N" {
-			return Token{Kind: TokenNullN, Value: "N"}, nil
-		}
-		return Token{Kind: TokenKey, Value: val}, nil
-	}
-
-	return Token{}, fmt.Errorf("unexpected character at position %d: %c", l.pos, ch)
-}
-
-func (l *Lexer) skipWhitespace() {
-	for l.pos < len(l.input) && unicode.IsSpace(rune(l.input[l.pos])) {
-		l.pos++
+// NewParser creates a new DSF parser
+func NewParser(input string) *Parser {
+	return &Parser{
+		input: []byte(input),
+		pos:   0,
 	}
 }
 
-func (l *Lexer) peek() byte {
-	if l.pos+1 < len(l.input) {
-		return l.input[l.pos+1]
+func (p *Parser) current() byte {
+	if p.pos < len(p.input) {
+		return p.input[p.pos]
 	}
 	return 0
 }
 
-func isIdentifierChar(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+func (p *Parser) advance() {
+	p.pos++
 }
 
-type Parser struct {
-	lexer *Lexer
-	token Token
-	err   error
-}
-
-func NewParser(input string) *Parser {
-	p := &Parser{lexer: NewLexer(input)}
-	p.nextToken()
-	return p
-}
-
-func (p *Parser) nextToken() {
-	if p.err != nil {
-		return
+func (p *Parser) skipWhitespace() {
+	for p.pos < len(p.input) {
+		ch := p.current()
+		switch ch {
+		case ' ', '\t', '\r', '\n':
+			p.advance()
+		case '/':
+			if p.pos+1 < len(p.input) && p.input[p.pos+1] == '/' {
+				// Skip comment
+				p.pos += 2
+				for p.pos < len(p.input) && p.current() != '\n' {
+					p.advance()
+				}
+			} else {
+				return
+			}
+		default:
+			return
+		}
 	}
-	p.token, p.err = p.lexer.NextToken()
 }
 
-func (p *Parser) Parse() (interface{}, error) {
-	val, err := p.parseObject()
+// Parse parses a DSF string and returns a map
+func (p *Parser) Parse() (map[string]DSFValue, error) {
+	p.skipWhitespace()
+	result, err := p.parseObject()
 	if err != nil {
 		return nil, err
 	}
-	if p.token.Kind != TokenEOF {
-		return nil, fmt.Errorf("trailing data: %v", p.token)
+	p.skipWhitespace()
+	if p.pos < len(p.input) {
+		return nil, fmt.Errorf("trailing data at position %d", p.pos)
 	}
-	return val, nil
+	return result, nil
 }
 
-func (p *Parser) parseValue() (interface{}, error) {
-	switch p.token.Kind {
-	case TokenBraceOpen:
+func (p *Parser) parseValue() (DSFValue, error) {
+	p.skipWhitespace()
+	ch := p.current()
+
+	switch ch {
+	case '{':
 		return p.parseObject()
-	case TokenBracketOpen:
+	case '[':
 		return p.parseArray()
-	case TokenString:
-		v := p.token.Value[1 : len(p.token.Value)-1]
-		p.nextToken()
-		return v, nil
-	case TokenNumber:
-		v := p.token.Value
-		p.nextToken()
-		if strings.Contains(v, ".") || strings.ContainsAny(v, "eE") {
-			return strconv.ParseFloat(v, 64)
+	case '`':
+		return p.parseString()
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return p.parseNumber()
+	case 'T':
+		if p.pos+1 < len(p.input) && p.input[p.pos+1] == '(' {
+			return p.parseConstructor()
 		}
-		return strconv.ParseInt(v, 10, 64)
-	case TokenBoolT:
-		p.nextToken()
+		p.advance()
 		return true, nil
-	case TokenBoolF:
-		p.nextToken()
+	case 'F':
+		if p.pos+1 < len(p.input) && p.input[p.pos+1] == '(' {
+			return p.parseConstructor()
+		}
+		p.advance()
 		return false, nil
-	case TokenNullN:
-		p.nextToken()
+	case 'N':
+		if p.pos+1 < len(p.input) && p.input[p.pos+1] == '(' {
+			return p.parseConstructor()
+		}
+		p.advance()
 		return nil, nil
-	case TokenConstructor:
-		v := p.token.Value
-		p.nextToken()
-		return p.parseConstructor(v)
 	default:
-		return nil, fmt.Errorf("unexpected token in value position: %v", p.token)
+		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_' {
+			return p.parseConstructor()
+		}
+		return nil, fmt.Errorf("unexpected character at position %d: %c", p.pos, ch)
 	}
 }
 
-func (p *Parser) parseObject() (map[string]interface{}, error) {
-	if p.token.Kind != TokenBraceOpen {
-		return nil, fmt.Errorf("expected {, got %v", p.token)
-	}
-	p.nextToken()
-	obj := make(map[string]interface{})
-	for p.token.Kind != TokenBraceClose && p.token.Kind != TokenEOF {
-		if p.token.Kind != TokenKey && p.token.Kind != TokenBoolT && p.token.Kind != TokenBoolF && p.token.Kind != TokenNullN {
-			return nil, fmt.Errorf("expected key, got %v", p.token)
-		}
-		key := p.token.Value
-		if _, ok := obj[key]; ok {
-			return nil, fmt.Errorf("duplicate key: %s", key)
-		}
-		p.nextToken()
-		if p.token.Kind != TokenColon {
-			return nil, fmt.Errorf("expected :, got %v", p.token)
-		}
-		p.nextToken()
-		val, err := p.parseValue()
+func (p *Parser) parseObject() (map[string]DSFValue, error) {
+	p.advance() // skip '{'
+	obj := make(map[string]DSFValue)
+
+	p.skipWhitespace()
+	for p.current() != '}' {
+		// Parse key
+		key, err := p.parseKey()
 		if err != nil {
 			return nil, err
 		}
-		obj[key] = val
-		if p.token.Kind == TokenComma {
-			p.nextToken()
-		} else if p.token.Kind != TokenBraceClose {
-			return nil, fmt.Errorf("expected , or }, got %v", p.token)
+
+		p.skipWhitespace()
+		if p.current() != ':' {
+			return nil, fmt.Errorf("expected ':' at position %d", p.pos)
+		}
+		p.advance()
+
+		value, err := p.parseValue()
+		if err != nil {
+			return nil, err
+		}
+		obj[key] = value
+
+		p.skipWhitespace()
+		if p.current() == ',' {
+			p.advance()
+			p.skipWhitespace()
 		}
 	}
-	if p.token.Kind != TokenBraceClose {
-		return nil, errors.New("expected }")
-	}
-	p.nextToken()
+
+	p.advance() // skip '}'
 	return obj, nil
 }
 
-func (p *Parser) parseArray() ([]interface{}, error) {
-	p.nextToken()
-	arr := make([]interface{}, 0)
-	for p.token.Kind != TokenBracketClose && p.token.Kind != TokenEOF {
-		val, err := p.parseValue()
+func (p *Parser) parseArray() ([]DSFValue, error) {
+	p.advance() // skip '['
+	arr := make([]DSFValue, 0)
+
+	p.skipWhitespace()
+	for p.current() != ']' {
+		value, err := p.parseValue()
 		if err != nil {
 			return nil, err
 		}
-		arr = append(arr, val)
-		if p.token.Kind == TokenComma {
-			p.nextToken()
-		} else if p.token.Kind != TokenBracketClose {
-			return nil, fmt.Errorf("expected , or ], got %v", p.token)
+		arr = append(arr, value)
+
+		p.skipWhitespace()
+		if p.current() == ',' {
+			p.advance()
+			p.skipWhitespace()
 		}
 	}
-	if p.token.Kind != TokenBracketClose {
-		return nil, errors.New("expected ]")
-	}
-	p.nextToken()
+
+	p.advance() // skip ']'
 	return arr, nil
 }
 
-func (p *Parser) parseConstructor(full string) (interface{}, error) {
-	idx := strings.Index(full, "(")
-	if idx == -1 {
-		return nil, fmt.Errorf("invalid constructor: %s", full)
+func (p *Parser) parseKey() (string, error) {
+	start := p.pos
+	for p.pos < len(p.input) {
+		ch := p.current()
+		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' {
+			p.advance()
+		} else {
+			break
+		}
 	}
-	typeName := full[:idx]
-	payload := full[idx+1 : len(full)-1]
+	return string(p.input[start:p.pos]), nil
+}
+
+func (p *Parser) parseString() (string, error) {
+	p.advance() // skip opening '`'
+	start := p.pos
+	for p.pos < len(p.input) && p.current() != '`' {
+		p.advance()
+	}
+	result := string(p.input[start:p.pos])
+	p.advance() // skip closing '`'
+	return result, nil
+}
+
+func (p *Parser) parseNumber() (float64, error) {
+	start := p.pos
+
+	// Optional negative sign
+	if p.current() == '-' {
+		p.advance()
+	}
+
+	// Integer part
+	if p.current() == '0' {
+		p.advance()
+	} else if p.current() >= '1' && p.current() <= '9' {
+		for p.pos < len(p.input) && p.current() >= '0' && p.current() <= '9' {
+			p.advance()
+		}
+	}
+
+	// Decimal part
+	if p.current() == '.' {
+		p.advance()
+		for p.pos < len(p.input) && p.current() >= '0' && p.current() <= '9' {
+			p.advance()
+		}
+	}
+
+	// Exponent
+	if p.current() == 'e' || p.current() == 'E' {
+		p.advance()
+		if p.current() == '+' || p.current() == '-' {
+			p.advance()
+		}
+		for p.pos < len(p.input) && p.current() >= '0' && p.current() <= '9' {
+			p.advance()
+		}
+	}
+
+	return strconv.ParseFloat(string(p.input[start:p.pos]), 64)
+}
+
+func (p *Parser) parseConstructor() (DSFValue, error) {
+	start := p.pos
+	for p.pos < len(p.input) {
+		ch := p.current()
+		if (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' {
+			p.advance()
+		} else {
+			break
+		}
+	}
+	typeName := string(p.input[start:p.pos])
+
+	if p.current() != '(' {
+		return nil, fmt.Errorf("expected '(' after constructor name at position %d", p.pos)
+	}
+	p.advance()
+
+	payloadStart := p.pos
+	for p.pos < len(p.input) && p.current() != ')' {
+		p.advance()
+	}
+	payload := string(p.input[payloadStart:p.pos])
+	p.advance() // skip ')'
 
 	switch typeName {
 	case "D":
 		t, err := time.Parse(time.RFC3339, payload)
 		if err != nil {
-			t, err = time.Parse("2006-01-02", payload)
-			if err != nil {
-				return payload, nil // Fallback
-			}
+			return payload, nil
 		}
 		return t, nil
 	case "BN":
-		bi := new(big.Int)
-		if _, ok := bi.SetString(payload, 10); !ok {
-			return nil, fmt.Errorf("invalid BN: %s", payload)
+		n := new(big.Int)
+		_, ok := n.SetString(payload, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid BN payload: %s", payload)
 		}
-		return bi, nil
+		return n, nil
 	case "B":
-		b, err := hex.DecodeString(payload)
+		bytes, err := hex.DecodeString(payload)
 		if err != nil {
-			return nil, fmt.Errorf("invalid B(hex): %s", payload)
+			return nil, fmt.Errorf("invalid B(hex) payload: %s", payload)
 		}
-		return b, nil
+		return bytes, nil
 	default:
 		return nil, fmt.Errorf("unknown constructor: %s", typeName)
 	}
 }
 
-func Stringify(v interface{}, indent string) string {
-	return stringifyRecursive(v, indent, 0)
+// Parse is a convenience function to parse DSF strings
+func Parse(input string) (map[string]DSFValue, error) {
+	parser := NewParser(input)
+	return parser.Parse()
 }
 
-func stringifyRecursive(v interface{}, indent string, level int) string {
-	sp := strings.Repeat(indent, level)
-	switch val := v.(type) {
-	case map[string]interface{}:
-		if len(val) == 0 {
-			return "{}"
+// Stringify converts a DSF value to a string
+func Stringify(value DSFValue, indent string) string {
+	var sb strings.Builder
+	stringifyValue(value, &sb, indent, 0)
+	return sb.String()
+}
+
+func stringifyValue(value DSFValue, sb *strings.Builder, indent string, level int) {
+	switch v := value.(type) {
+	case string:
+		sb.WriteString("`")
+		sb.WriteString(v)
+		sb.WriteString("`")
+	case float64:
+		sb.WriteString(strconv.FormatFloat(v, 'g', -1, 64))
+	case int:
+		sb.WriteString(strconv.Itoa(v))
+	case bool:
+		if v {
+			sb.WriteString("T")
+		} else {
+			sb.WriteString("F")
 		}
-		var keys []string
-		for k := range val {
+	case nil:
+		sb.WriteString("N")
+	case *big.Int:
+		sb.WriteString("BN(")
+		sb.WriteString(v.String())
+		sb.WriteString(")")
+	case time.Time:
+		sb.WriteString("D(")
+		str := v.Format(time.RFC3339Nano)
+		if strings.HasSuffix(str, ".000Z") {
+			str = str[:len(str)-5] + "Z"
+		}
+		sb.WriteString(str)
+		sb.WriteString(")")
+	case []byte:
+		sb.WriteString("B(")
+		sb.WriteString(strings.ToUpper(hex.EncodeToString(v)))
+		sb.WriteString(")")
+	case []DSFValue:
+		if len(v) == 0 {
+			sb.WriteString("[]")
+			return
+		}
+		sb.WriteString("[")
+		if indent != "" {
+			sb.WriteString("\n")
+			for _, item := range v {
+				for j := 0; j <= level; j++ {
+					sb.WriteString(indent)
+				}
+				stringifyValue(item, sb, indent, level+1)
+				sb.WriteString(",\n")
+			}
+			for j := 0; j < level; j++ {
+				sb.WriteString(indent)
+			}
+		} else {
+			for i, item := range v {
+				stringifyValue(item, sb, indent, level+1)
+				if i < len(v)-1 {
+					sb.WriteString(",")
+				}
+			}
+		}
+		sb.WriteString("]")
+	case map[string]DSFValue:
+		if len(v) == 0 {
+			sb.WriteString("{}")
+			return
+		}
+		keys := make([]string, 0, len(v))
+		for k := range v {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
-		var items []string
-		for _, k := range keys {
-			items = append(items, fmt.Sprintf("%s%s%s: %s", sp, indent, k, stringifyRecursive(val[k], indent, level+1)))
-		}
-		sep := ""
-		if indent != "" {
-			sep = "\n"
-		}
-		inner := strings.Join(items, ","+sep)
-		if indent != "" {
-			return fmt.Sprintf("{\n%s,\n%s}", inner, sp)
-		}
-		return fmt.Sprintf("{%s}", inner)
-	case []interface{}:
-		if len(val) == 0 {
-			return "[]"
-		}
-		var items []string
-		for _, item := range val {
-			items = append(items, fmt.Sprintf("%s%s%s", sp, indent, stringifyRecursive(item, indent, level+1)))
-		}
-		sep := ""
-		if indent != "" {
-			sep = "\n"
-		}
-		inner := strings.Join(items, ","+sep)
-		if indent != "" {
-			return fmt.Sprintf("[\n%s,\n%s]", inner, sp)
-		}
-		return fmt.Sprintf("[%s]", inner)
-	case string:
-		return fmt.Sprintf("`%s`", val)
-	case bool:
-		if val {
-			return "T"
-		}
-		return "F"
-	case nil:
-		return "N"
-	case int, int64:
-		return fmt.Sprintf("%d", val)
-	case float64:
-		return fmt.Sprintf("%g", val)
-	case *big.Int:
-		return fmt.Sprintf("BN(%s)", val.String())
-	case []byte:
-		return fmt.Sprintf("B(%s)", strings.ToUpper(hex.EncodeToString(val)))
-	case time.Time:
-		iv := val.Format(time.RFC3339)
-		if strings.HasSuffix(iv, "Z") {
-			// standard ISO
-		}
-		return fmt.Sprintf("D(%s)", iv)
-	default:
-		return fmt.Sprintf("?%T?", v)
-	}
-}
 
-func Parse(input string) (interface{}, error) {
-	p := NewParser(input)
-	return p.Parse()
+		sb.WriteString("{")
+		if indent != "" {
+			sb.WriteString("\n")
+			for _, k := range keys {
+				for j := 0; j <= level; j++ {
+					sb.WriteString(indent)
+				}
+				sb.WriteString(k)
+				sb.WriteString(": ")
+				stringifyValue(v[k], sb, indent, level+1)
+				sb.WriteString(",\n")
+			}
+			for j := 0; j < level; j++ {
+				sb.WriteString(indent)
+			}
+		} else {
+			for i, k := range keys {
+				sb.WriteString(k)
+				sb.WriteString(":")
+				stringifyValue(v[k], sb, indent, level+1)
+				if i < len(keys)-1 {
+					sb.WriteString(",")
+				}
+			}
+		}
+		sb.WriteString("}")
+	}
 }

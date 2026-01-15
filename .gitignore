@@ -45,3 +45,9 @@ Thumb.db
 .idea/
 *.swp
 *.swo
+
+# Rust
+target/
+debug/
+**/*.rs.bk
+Cargo.lock
