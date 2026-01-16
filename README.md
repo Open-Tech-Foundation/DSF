@@ -9,7 +9,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 
 ## Overview
 
-**DSF (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
+>**DSF (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
 
 ![JSON vs DSF Comparison](assets/json_vs_dsf.png)
 
@@ -36,6 +36,7 @@ The `ref-impl/` directory contains reference implementations for various languag
 -   [Rust](ref-impl/rs/)
 
 ## 📊 Benchmark Results
+
 
 DSF consistently achieves a **reduced payload size** (16%–20%) compared to JSON. Most notably, optimized DSF implementations can **outperform native JSON parsers** in speed.
 
