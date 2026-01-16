@@ -25,6 +25,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 ## Documentation
 
 -   [DSF 1.0 Specification (Draft)](doc/spec.md)
+-   [Comparison with Other Formats](doc/comparison.md)
 
 ## Reference Implementations
 
