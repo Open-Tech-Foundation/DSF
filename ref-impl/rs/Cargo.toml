@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8"
+ryu = "1.0"
+memchr = "2.7"
+rustc-hash = "2.1"

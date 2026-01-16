@@ -1,5 +1,6 @@
-use std::collections::HashMap;
 use std::fmt;
+use rustc_hash::FxHashMap;
+use memchr::memchr;
 
 #[derive(Debug)]
 pub enum DSFError {
@@ -25,16 +26,16 @@ impl fmt::Display for DSFError {
 impl std::error::Error for DSFError {}
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DSFValue {
-    String(String),
+pub enum DSFValue<'a> {
+    String(&'a str),
     Number(f64),
     Bool(bool),
     Null,
     BigInt(i64),
-    Date(String),
+    Date(&'a str),
     Bytes(Vec<u8>),
-    Array(Vec<DSFValue>),
-    Object(HashMap<String, DSFValue>),
+    Array(Vec<DSFValue<'a>>),
+    Object(FxHashMap<&'a str, DSFValue<'a>>),
 }
 
 pub struct DSFParser<'a> {
@@ -52,11 +53,7 @@ impl<'a> DSFParser<'a> {
 
     #[inline]
     fn current(&self) -> Option<u8> {
-        if self.pos < self.input.len() {
-            Some(self.input[self.pos])
-        } else {
-            None
-        }
+        self.input.get(self.pos).copied()
     }
 
     #[inline]
@@ -64,37 +61,35 @@ impl<'a> DSFParser<'a> {
         self.pos += 1;
     }
 
-    #[inline]
+    #[inline(always)]
     fn skip_whitespace(&mut self) {
-        while let Some(ch) = self.current() {
-            match ch {
-                b' ' | b'\t' | b'\r' | b'\n' => self.advance(),
-                b'/' if self.peek_next() == Some(b'/') => {
-                    // Skip comment
-                    self.advance();
-                    self.advance();
-                    while let Some(ch) = self.current() {
-                        self.advance();
-                        if ch == b'\n' {
-                            break;
-                        }
+        let mut i = self.pos;
+        let bytes = self.input;
+        let len = bytes.len();
+        
+        while i < len {
+            match bytes[i] {
+                b' ' | b'\t' | b'\r' | b'\n' => i += 1,
+                b'/' if i + 1 < len && bytes[i + 1] == b'/' => {
+                    i += 2;
+                    if let Some(next_nl) = memchr(b'\n', &bytes[i..]) {
+                        i += next_nl + 1;
+                    } else {
+                        i = len;
                     }
                 }
                 _ => break,
             }
         }
+        self.pos = i;
     }
 
-    #[inline]
+    #[inline(always)]
     fn peek_next(&self) -> Option<u8> {
-        if self.pos + 1 < self.input.len() {
-            Some(self.input[self.pos + 1])
-        } else {
-            None
-        }
+        self.input.get(self.pos + 1).copied()
     }
 
-    pub fn parse(&mut self) -> Result<HashMap<String, DSFValue>, DSFError> {
+    pub fn parse(&mut self) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
         self.skip_whitespace();
         let result = self.parse_object()?;
         self.skip_whitespace();
@@ -104,7 +99,8 @@ impl<'a> DSFParser<'a> {
         Ok(result)
     }
 
-    fn parse_value(&mut self) -> Result<DSFValue, DSFError> {
+    #[inline]
+    fn parse_value(&mut self) -> Result<DSFValue<'a>, DSFError> {
         self.skip_whitespace();
         match self.current() {
             Some(b'{') => Ok(DSFValue::Object(self.parse_object()?)),
@@ -129,18 +125,17 @@ impl<'a> DSFParser<'a> {
         }
     }
 
-    fn parse_object(&mut self) -> Result<HashMap<String, DSFValue>, DSFError> {
+    fn parse_object(&mut self) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
         self.advance(); // skip '{'
-        let mut map = HashMap::new();
+        let mut map = FxHashMap::default();
 
         self.skip_whitespace();
         while self.current() != Some(b'}') {
-            // Parse key
             let key = self.parse_key()?;
             self.skip_whitespace();
 
             if self.current() != Some(b':') {
-                return Err(DSFError::UnexpectedChar(self.pos, self.current().unwrap() as char));
+                return Err(DSFError::UnexpectedChar(self.pos, self.current().map(|c| c as char).unwrap_or('\0')));
             }
             self.advance(); // skip ':'
 
@@ -158,7 +153,7 @@ impl<'a> DSFParser<'a> {
         Ok(map)
     }
 
-    fn parse_array(&mut self) -> Result<Vec<DSFValue>, DSFError> {
+    fn parse_array(&mut self) -> Result<Vec<DSFValue<'a>>, DSFError> {
         self.advance(); // skip '['
         let mut arr = Vec::new();
 
@@ -177,74 +172,62 @@ impl<'a> DSFParser<'a> {
         Ok(arr)
     }
 
-    fn parse_key(&mut self) -> Result<String, DSFError> {
+    #[inline(always)]
+    fn parse_key(&mut self) -> Result<&'a str, DSFError> {
         let start = self.pos;
-        while let Some(ch) = self.current() {
+        let bytes = self.input;
+        let len = bytes.len();
+        let mut i = start;
+        while i < len {
+            let ch = bytes[i];
             if ch.is_ascii_alphanumeric() || ch == b'_' {
-                self.advance();
+                i += 1;
             } else {
                 break;
             }
         }
-        Ok(String::from_utf8_lossy(&self.input[start..self.pos]).to_string())
+        self.pos = i;
+        // Unsafe because we assume the input is valid UTF-8 (as per spec) and we only parsed ASCII
+        unsafe { Ok(std::str::from_utf8_unchecked(&bytes[start..i])) }
     }
 
-    fn parse_string(&mut self) -> Result<String, DSFError> {
+    fn parse_string(&mut self) -> Result<&'a str, DSFError> {
         self.advance(); // skip opening '`'
         let start = self.pos;
-        while let Some(ch) = self.current() {
-            if ch == b'`' {
-                break;
-            }
-            self.advance();
+        if let Some(end) = memchr(b'`', &self.input[start..]) {
+            let abs_end = start + end;
+            self.pos = abs_end + 1;
+            // Unsafe because we already validated the presence of closing '`' and assume valid UTF-8 input
+            unsafe { Ok(std::str::from_utf8_unchecked(&self.input[start..abs_end])) }
+        } else {
+            Err(DSFError::UnexpectedEOF)
         }
-        let result = String::from_utf8_lossy(&self.input[start..self.pos]).to_string();
-        self.advance(); // skip closing '`'
-        Ok(result)
     }
 
     fn parse_number(&mut self) -> Result<f64, DSFError> {
         let start = self.pos;
-
-        // Optional negative sign
-        if self.current() == Some(b'-') {
-            self.advance();
-        }
-
-        // Integer part
+        if self.current() == Some(b'-') { self.advance(); }
         if self.current() == Some(b'0') {
             self.advance();
         } else if matches!(self.current(), Some(b'1'..=b'9')) {
-            while matches!(self.current(), Some(b'0'..=b'9')) {
-                self.advance();
-            }
+            while matches!(self.current(), Some(b'0'..=b'9')) { self.advance(); }
         }
-
-        // Decimal part
         if self.current() == Some(b'.') {
             self.advance();
-            while matches!(self.current(), Some(b'0'..=b'9')) {
-                self.advance();
-            }
+            while matches!(self.current(), Some(b'0'..=b'9')) { self.advance(); }
         }
-
-        // Exponent
         if matches!(self.current(), Some(b'e') | Some(b'E')) {
             self.advance();
-            if matches!(self.current(), Some(b'+') | Some(b'-')) {
-                self.advance();
-            }
-            while matches!(self.current(), Some(b'0'..=b'9')) {
-                self.advance();
-            }
+            if matches!(self.current(), Some(b'+') | Some(b'-')) { self.advance(); }
+            while matches!(self.current(), Some(b'0'..=b'9')) { self.advance(); }
         }
-
-        let num_str = String::from_utf8_lossy(&self.input[start..self.pos]);
+        let num_str = std::str::from_utf8(&self.input[start..self.pos])
+            .map_err(|_| DSFError::InvalidNumber("invalid utf8".to_string()))?;
         num_str.parse::<f64>()
             .map_err(|_| DSFError::InvalidNumber(num_str.to_string()))
     }
 
-    fn parse_constructor(&mut self) -> Result<DSFValue, DSFError> {
+    fn parse_constructor(&mut self) -> Result<DSFValue<'a>, DSFError> {
         let start = self.pos;
         while let Some(ch) = self.current() {
             if ch.is_ascii_alphanumeric() || ch == b'_' {
@@ -253,24 +236,26 @@ impl<'a> DSFParser<'a> {
                 break;
             }
         }
-        let type_name = String::from_utf8_lossy(&self.input[start..self.pos]).to_string();
+        let type_name = std::str::from_utf8(&self.input[start..self.pos])
+            .map_err(|_| DSFError::InvalidConstructor("invalid utf8".to_string()))?;
 
         if self.current() != Some(b'(') {
-            return Err(DSFError::InvalidConstructor(type_name));
+            return Err(DSFError::InvalidConstructor(type_name.to_string()));
         }
         self.advance(); // skip '('
 
         let payload_start = self.pos;
         while self.current() != Some(b')') {
-            if self.current().is_none() {
+            if self.pos >= self.input.len() {
                 return Err(DSFError::UnexpectedEOF);
             }
             self.advance();
         }
-        let payload = String::from_utf8_lossy(&self.input[payload_start..self.pos]).to_string();
+        let payload = std::str::from_utf8(&self.input[payload_start..self.pos])
+            .map_err(|_| DSFError::InvalidConstructor("invalid utf8 in payload".to_string()))?;
         self.advance(); // skip ')'
 
-        match type_name.as_str() {
+        match type_name {
             "D" => Ok(DSFValue::Date(payload)),
             "BN" => {
                 let num = payload.parse::<i64>()
@@ -278,7 +263,7 @@ impl<'a> DSFParser<'a> {
                 Ok(DSFValue::BigInt(num))
             }
             "B" => {
-                let mut bytes = Vec::new();
+                let mut bytes = Vec::with_capacity(payload.len() / 2);
                 for i in (0..payload.len()).step_by(2) {
                     let byte = u8::from_str_radix(&payload[i..i+2], 16)
                         .map_err(|_| DSFError::InvalidConstructor(format!("B({})", payload)))?;
@@ -286,14 +271,14 @@ impl<'a> DSFParser<'a> {
                 }
                 Ok(DSFValue::Bytes(bytes))
             }
-            _ => Err(DSFError::InvalidConstructor(type_name)),
+            _ => Err(DSFError::InvalidConstructor(type_name.to_string())),
         }
     }
 }
 
 // Stringifier
 pub fn stringify(value: &DSFValue, indent: Option<&str>) -> String {
-    let mut result = String::new();
+    let mut result = String::with_capacity(1024);
     stringify_value(value, &mut result, indent, 0);
     result
 }
@@ -305,7 +290,10 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
             out.push_str(s);
             out.push('`');
         }
-        DSFValue::Number(n) => out.push_str(&n.to_string()),
+        DSFValue::Number(n) => {
+            let mut buf = ryu::Buffer::new();
+            out.push_str(buf.format(*n));
+        }
         DSFValue::Bool(true) => out.push('T'),
         DSFValue::Bool(false) => out.push('F'),
         DSFValue::Null => out.push('N'),
@@ -322,7 +310,9 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
         DSFValue::Bytes(bytes) => {
             out.push_str("B(");
             for byte in bytes {
-                out.push_str(&format!("{:02X}", byte));
+                const HEX: &[u8; 16] = b"0123456789ABCDEF";
+                out.push(HEX[(byte >> 4) as usize] as char);
+                out.push(HEX[(byte & 0x0F) as usize] as char);
             }
             out.push(')');
         }
@@ -334,22 +324,16 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
             out.push('[');
             if let Some(ind) = indent {
                 out.push('\n');
-                for (_i, item) in arr.iter().enumerate() {
-                    for _ in 0..=level {
-                        out.push_str(ind);
-                    }
+                for item in arr.iter() {
+                    for _ in 0..=level { out.push_str(ind); }
                     stringify_value(item, out, indent, level + 1);
                     out.push_str(",\n");
                 }
-                for _ in 0..level {
-                    out.push_str(ind);
-                }
+                for _ in 0..level { out.push_str(ind); }
             } else {
                 for (i, item) in arr.iter().enumerate() {
                     stringify_value(item, out, indent, level + 1);
-                    if i < arr.len() - 1 {
-                        out.push(',');
-                    }
+                    if i < arr.len() - 1 { out.push(','); }
                 }
             }
             out.push(']');
@@ -361,30 +345,24 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
             }
             out.push('{');
             let mut keys: Vec<_> = map.keys().collect();
-            keys.sort();
+            keys.sort_unstable();
             
             if let Some(ind) = indent {
                 out.push('\n');
                 for key in keys {
-                    for _ in 0..=level {
-                        out.push_str(ind);
-                    }
+                    for _ in 0..=level { out.push_str(ind); }
                     out.push_str(key);
                     out.push_str(": ");
                     stringify_value(&map[key], out, indent, level + 1);
                     out.push_str(",\n");
                 }
-                for _ in 0..level {
-                    out.push_str(ind);
-                }
+                for _ in 0..level { out.push_str(ind); }
             } else {
                 for (i, key) in keys.iter().enumerate() {
                     out.push_str(key);
                     out.push(':');
                     stringify_value(&map[*key], out, indent, level + 1);
-                    if i < keys.len() - 1 {
-                        out.push(',');
-                    }
+                    if i < keys.len() - 1 { out.push(','); }
                 }
             }
             out.push('}');
@@ -393,7 +371,8 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
 }
 
 // Public API
-pub fn parse(input: &str) -> Result<HashMap<String, DSFValue>, DSFError> {
+#[inline]
+pub fn parse<'a>(input: &'a str) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
     let mut parser = DSFParser::new(input);
     parser.parse()
 }
