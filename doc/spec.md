@@ -20,7 +20,17 @@ DSF emphasizes:
 * explicit typing via constructor literals
 * human readability without implicit semantics
 
-DSF is **not executable**, has **no evaluation semantics**, and is **not a programming language**.
+### 1.1 Media Type
+The formal media type for DSF is:
+`application/dsf`
+
+### 1.2 Non-Goals
+To maintain simplicity and predictability, the following are **NOT** goals of DSF:
+* **Programming Logic**: DSF has no execution semantics, variables, or functions.
+* **Schema Validation**: DSF provides explicit typing, but does not define a schema language.
+* **Resource Referencing**: DSF does not support internal references (anchors) or external imports.
+* **Streaming Framing**: DSF is designed as a discrete document format, not a framing protocol.
+* **Comments as Data**: Comments are purely for documentation and SHOULD BE ignored by processors.
 
 ---
 
@@ -184,7 +194,7 @@ Not supported:
 
 ## 9. Strings
 
-Strings are enclosed in backticks (`` ` ``).
+Strings are used for arbitrary textual data.
 
 ```dsf
 {
@@ -193,8 +203,14 @@ Strings are enclosed in backticks (`` ` ``).
 }
 ```
 
-* Backticks within a string are not supported in 1.0 (requires 1.1 or escaping).
-* Normal whitespace and newlines are allowed within strings.
+### 9.1 Rules
+* **Delimiter**: Strings **MUST** be enclosed in backticks (`` ` ``).
+* **Backticks within Strings**: The backtick character is **NOT** allowed inside a string in DSF 1.0.
+* **Newlines**: Literals newlines are **ALLOWED** and preserved.
+* **Escaping**: DSF 1.0 does **NOT** support escape sequences (e.g., `\n`, `\t`). All characters (except the delimiter) are treated literally.
+
+#### Rationale
+Excluding escapes and internal delimiters ensures that strings can be scanned with a single pass using simple byte comparison (`memchr`), maximizing parsing speed.
 
 ---
 
@@ -264,6 +280,11 @@ Rules:
 * No nesting of constructors
 * Constructors are declarative, not executable
 
+### 13.1 Strict Constructor Policy
+DSF 1.0 enforces a closed set of constructors. Only types defined in this specification are valid.
+*   **Unknown Types**: Any constructor name not explicitly defined in the Standard Constructors section **MUST** result in a parse error.
+*   **No Custom Extensions**: User-defined or vendor-defined constructors are not supported in this version.
+
 ---
 
 ## 14. Standard Constructor Literals
@@ -331,15 +352,18 @@ Trailing commas are **allowed** in:
 
 ---
 
-## 16. Canonical Form (Recommended)
+## 16. Canonical Form (Normative)
 
-Canonical DSF output SHOULD:
+To ensure interoperability and reproducible hashing/signing, a DSF document **MUST** be converted to its Canonical Form when transmitted in environments requiring determinism.
 
-* Use uppercase literals (`T`, `F`, `N`)
-* Use uppercase constructor names
-* Normalize line endings to `\n`
-* Normalize `BN(...)` and `B(...)` payloads
-* Avoid unnecessary whitespace
+A Canonical DSF document **MUST**:
+1.  **Normalization**: Use uppercase for literals (`T`, `F`, `N`) and constructor names (`D`, `BN`, `B`).
+2.  **Line Endings**: Use a single line feed (`\n`) for all newlines.
+3.  **No Indentation**: Remove all unnecessary whitespace between tokens.
+4.  **Constructor Payloads**:
+    *   `BN(...)`: Remove leading zeros and `+` signs. `BN(-0)` MUST become `BN(0)`.
+    *   `B(...)`: Use uppercase hex digits.
+5.  **Key Sorting**: Keys within an object **SHOULD** be sorted lexicographically by their UTF-8 byte values (optional but recommended for strictly reproducible output).
 
 ---
 
@@ -374,11 +398,16 @@ Parsers MUST report errors for:
 ## 19. Security Considerations
 
 * DSF has no execution semantics.
-* Parsers SHOULD enforce limits on:
-
-  * nesting depth
-  * constructor payload length
 * Binary and big-number payloads may be attacker-controlled.
+
+### 19.1 Implementation Limits
+To prevent Denial of Service (DoS) attacks, implementations SHOULD enforce the following minimum limits:
+*   **Nesting Depth**: At least 32 levels.
+*   **Constructor Payload**: At least 64 KB.
+*   **Identifier Length**: At least 256 bytes.
+*   **Document Size**: At least 100 MB.
+
+Implementations MAY provide configuration to increase these limits for specific use cases.
 
 ---
 
@@ -400,4 +429,51 @@ Parsers MUST report errors for:
     enabled: F,
   },
 }
+```
+
+---
+
+## 21. Appendix A: Formal EBNF Grammar
+
+The following is a formal description of DSF 1.0 using Extended Backus-Naur Form (EBNF).
+
+```ebnf
+(* DSF 1.0 Grammar *)
+
+document      = ws object ws ;
+
+object        = "{" [ member { "," member } [ "," ] ] "}" ;
+member        = key ws ":" ws value ;
+key           = identifier ;
+
+array         = "[" [ value { "," value } [ "," ] ] "]" ;
+
+value         = ( number | boolean | null | string | array | object | constructor ) ;
+
+constructor   = ( "D" | "BN" | "B" ) "(" payload ")" ;
+payload       = char_not_paren { char_not_paren } ;
+
+string        = "`" { char_not_backtick } "`" ;
+
+boolean       = "T" | "F" ;
+null          = "N" ;
+
+number        = [ "-" ] ( "0" | ( digit1_9 { digit } ) ) [ "." fraction ] [ exponent ] ;
+fraction      = digit { digit } ;
+exponent      = ( "e" | "E" ) [ "-" | "+" ] digit { digit } ;
+
+identifier    = id_char { id_char } ;
+id_char       = letter | digit | "_" ;
+
+ws            = { whitespace | comment } ;
+whitespace    = " " | "\t" | "\n" | "\r" ;
+comment       = "//" { char_not_newline } "\n" ;
+
+(* Character classes *)
+letter            = "A" | ... | "Z" | "a" | ... | "z" ;
+digit             = "0" | ... | "9" ;
+digit1_9          = "1" | ... | "9" ;
+char_not_paren    = ? all UTF-8 except "(", ")", and whitespace ? ;
+char_not_backtick = ? all UTF-8 except "`" ? ;
+char_not_newline  = ? all UTF-8 except "\n" ? ;
 ```
