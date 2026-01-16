@@ -11,24 +11,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 
 **DSF (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
 
-### Quick Example
-
-```dsf
-// Comprehensive DSF example
-{
-  name: `DSF Specification`,
-  version: 1.0,
-  active: T,
-  tags: [`data`, `predictable`, `fast`],
-  metadata: {
-    created: D(2026-01-16),
-    updated: D(2026-01-16T01:33:00Z),
-    checksum: B(A7B2319E44CE12BA),
-    large_int: BN(9007199254740993),
-    notes: N, // explicitness
-  },
-}
-```
+![JSON vs DSF Comparison](assets/json_vs_dsf.png)
 
 ### Key Features
 
@@ -36,6 +19,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 - **Backtick Strings**: No more escaping double quotes.
 - **Explicit Literals**: `T`, `F`, `N` for True, False, and Null.
 - **Constructor Literals**: Native support for Dates `D()`, BigNumbers `BN()`, and Binary `B()`.
+- **Single-line Comments**: Use `//` for notes and documentation.
 - **Fast Parsing**: Designed for direct byte-level processing.
 
 ## Documentation
@@ -47,7 +31,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 The `ref-impl/` directory contains reference implementations for various languages:
 
 -   [Python](ref-impl/python/)
--   [TypeScript (Bun)](ref-impl/ts/)
+-   [TypeScript](ref-impl/ts/)
 -   [Go](ref-impl/go/)
 -   [Rust](ref-impl/rs/)
 

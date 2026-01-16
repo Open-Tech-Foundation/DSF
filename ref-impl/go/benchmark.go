@@ -52,8 +52,8 @@ func main() {
 	jsonBytes, _ := json.Marshal(rawData)
 	dsfStr := dsf.Stringify(rawData, "")
 
-	os.WriteFile("bench_v2_go.json", jsonBytes, 0644)
-	os.WriteFile("bench_v2_go.dsf", []byte(dsfStr), 0644)
+	os.WriteFile("../../benchmarks/go/bench_v2_go.json", jsonBytes, 0644)
+	os.WriteFile("../../benchmarks/go/bench_v2_go.dsf", []byte(dsfStr), 0644)
 
 	jsonSize := len(jsonBytes)
 	dsfSize := len(dsfStr)

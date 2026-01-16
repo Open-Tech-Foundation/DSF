@@ -40,11 +40,11 @@ async function runBenchmark() {
     const jsonStr = JSON.stringify(rawData);
     const dsfStr = dsf.stringify(rawData);
 
-    writeFileSync('bench_v2.json', jsonStr);
-    writeFileSync('bench_v2.dsf', dsfStr);
+    writeFileSync('../../benchmarks/ts/bench_v2.json', jsonStr);
+    writeFileSync('../../benchmarks/ts/bench_v2.dsf', dsfStr);
 
-    const jsonSize = statSync('bench_v2.json').size;
-    const dsfSize = statSync('bench_v2.dsf').size;
+    const jsonSize = statSync('../../benchmarks/ts/bench_v2.json').size;
+    const dsfSize = statSync('../../benchmarks/ts/bench_v2.dsf').size;
 
     console.log("\n--- Payload Size ---");
     console.log(`JSON: ${(jsonSize / 1024 / 1024).toFixed(2)} MB`);
