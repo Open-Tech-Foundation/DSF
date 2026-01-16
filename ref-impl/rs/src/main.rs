@@ -1,4 +1,4 @@
-use dsf::{DSFValue, parse, stringify};
+use dsf_rs::{DSFValue, parse, stringify};
 use std::time::Instant;
 use rustc_hash::FxHashMap;
 use std::fs::File;

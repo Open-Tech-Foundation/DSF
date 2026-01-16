@@ -3,8 +3,13 @@ name = "dsf"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "dsf_rs"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 rand = "0.8"
 ryu = "1.0"
 memchr = "2.7"
 rustc-hash = "2.1"
+pyo3 = { version = "0.23", features = ["extension-module"] }

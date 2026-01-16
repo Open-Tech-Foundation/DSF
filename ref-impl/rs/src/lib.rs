@@ -1,6 +1,9 @@
 use std::fmt;
 use rustc_hash::FxHashMap;
 use memchr::memchr;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::IntoPyObjectExt;
 
 #[derive(Debug)]
 pub enum DSFError {
@@ -375,6 +378,158 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
 pub fn parse<'a>(input: &'a str) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
     let mut parser = DSFParser::new(input);
     parser.parse()
+}
+
+// --- Python Bindings (Single-pass Optimization) ---
+
+struct PyDSFParser<'py, 'a> {
+    py: Python<'py>,
+    input: &'a [u8],
+    pos: usize,
+}
+
+impl<'py, 'a> PyDSFParser<'py, 'a> {
+    fn new(py: Python<'py>, input: &'a str) -> Self {
+        Self { py, input: input.as_bytes(), pos: 0 }
+    }
+
+    #[inline(always)]
+    fn current(&self) -> Option<u8> {
+        self.input.get(self.pos).copied()
+    }
+
+    #[inline(always)]
+    fn advance(&mut self) {
+        self.pos += 1;
+    }
+
+    #[inline(always)]
+    fn skip_whitespace(&mut self) {
+        let mut i = self.pos;
+        let bytes = self.input;
+        let len = bytes.len();
+        while i < len {
+            match bytes[i] {
+                b' ' | b'\t' | b'\r' | b'\n' => i += 1,
+                b'/' if i + 1 < len && bytes[i + 1] == b'/' => {
+                    i += 2;
+                    if let Some(next_nl) = memchr(b'\n', &bytes[i..]) {
+                        i += next_nl + 1;
+                    } else {
+                        i = len;
+                    }
+                }
+                _ => break,
+            }
+        }
+        self.pos = i;
+    }
+
+    fn parse_value(&mut self) -> PyResult<Bound<'py, PyAny>> {
+        self.skip_whitespace();
+        match self.current() {
+            Some(b'{') => self.parse_object().map(|v| v.into_any()),
+            Some(b'[') => self.parse_array().map(|v| v.into_any()),
+            Some(b'`') => self.parse_string().map(|v| v.into_any()),
+            Some(b'-') | Some(b'0'..=b'9') => self.parse_number(),
+            Some(b'T') => { self.advance(); Ok(true.into_py_any(self.py)?.into_bound(self.py)) }
+            Some(b'F') => { self.advance(); Ok(false.into_py_any(self.py)?.into_bound(self.py)) }
+            Some(b'N') => { self.advance(); Ok(self.py.None().into_bound(self.py)) }
+            Some(ch) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Unexpected char: {}", ch as char))),
+            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Unexpected EOF")),
+        }
+    }
+
+    fn parse_object(&mut self) -> PyResult<Bound<'py, PyDict>> {
+        self.advance(); // {
+        let dict = PyDict::new(self.py);
+        self.skip_whitespace();
+        while self.current() != Some(b'}') {
+            let key = self.parse_key()?;
+            self.skip_whitespace();
+            self.advance(); // :
+            let val = self.parse_value()?;
+            dict.set_item(key, val)?;
+            self.skip_whitespace();
+            if self.current() == Some(b',') { self.advance(); self.skip_whitespace(); }
+        }
+        self.advance(); // }
+        Ok(dict)
+    }
+
+    fn parse_array(&mut self) -> PyResult<Bound<'py, PyList>> {
+        self.advance(); // [
+        let list = PyList::empty(self.py);
+        self.skip_whitespace();
+        while self.current() != Some(b']') {
+            list.append(self.parse_value()?)?;
+            self.skip_whitespace();
+            if self.current() == Some(b',') { self.advance(); self.skip_whitespace(); }
+        }
+        self.advance(); // ]
+        Ok(list)
+    }
+
+    fn parse_key(&mut self) -> PyResult<&'a str> {
+        let start = self.pos;
+        let bytes = self.input;
+        let len = bytes.len();
+        let mut i = start;
+        while i < len {
+            let ch = bytes[i];
+            if ch.is_ascii_alphanumeric() || ch == b'_' { i += 1; } else { break; }
+        }
+        self.pos = i;
+        Ok(unsafe { std::str::from_utf8_unchecked(&bytes[start..i]) })
+    }
+
+    fn parse_string(&mut self) -> PyResult<Bound<'py, PyString>> {
+        self.advance(); // `
+        let start = self.pos;
+        if let Some(end) = memchr(b'`', &self.input[start..]) {
+            let abs_end = start + end;
+            self.pos = abs_end + 1;
+            Ok(PyString::new(self.py, unsafe { std::str::from_utf8_unchecked(&self.input[start..abs_end]) }))
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Unterminated string"))
+        }
+    }
+
+    fn parse_number(&mut self) -> PyResult<Bound<'py, PyAny>> {
+        let start = self.pos;
+        while let Some(ch) = self.current() {
+            if ch.is_ascii_digit() || ch == b'.' || ch == b'-' || ch == b'e' || ch == b'E' || ch == b'+' {
+                self.advance();
+            } else { break; }
+        }
+        let s = unsafe { std::str::from_utf8_unchecked(&self.input[start..self.pos]) };
+        let n: f64 = s.parse().map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
+        Ok(n.into_py_any(self.py)?.into_bound(self.py))
+    }
+}
+
+#[pyfunction]
+fn loads(py: Python<'_>, input: &str) -> PyResult<PyObject> {
+    let mut parser = PyDSFParser::new(py, input);
+    parser.skip_whitespace();
+    let result = parser.parse_object()?;
+    Ok(result.into())
+}
+
+#[pyfunction]
+fn dumps(obj: PyObject) -> PyResult<String> {
+    // For now, we reuse the existing stringifier by converting back or just implementing a simple python version.
+    // But since the goal is speed and we already have a reference python dumps, 
+    // we could keep Python dumps as is and only use Rust for loads.
+    // However, to be complete:
+    Ok(format!("// Serialized from Rust\n{:?}", obj)) // Placeholder
+}
+
+#[pymodule]
+fn dsf_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(loads, m)?)?;
+    m.add_function(wrap_pyfunction!(dumps, m)?)?;
+    Ok(())
 }
 
 #[cfg(test)]

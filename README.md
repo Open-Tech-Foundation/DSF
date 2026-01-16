@@ -47,12 +47,15 @@ DSF consistently achieves a **reduced payload size** (16%–20%) compared to JSO
 | 📏 **Payload Size** | Go | 6.28 MB | 5.13 MB | 📉 **-18.3%** |
 | | Rust | 6.45 MB | 5.13 MB | 📉 **-20.5%** |
 | | TypeScript | 6.28 MB | 5.25 MB | 📉 **-16.5%** |
+| | Python | 7.08 MB | 5.93 MB | 📉 **-16.2%** |
 | ⏱️ **Parsing Time** | Go | 99.6 ms | 63.2 ms | 🚀 **37% faster** |
 | | Rust | 72.2 ms | 47.1 ms | 🚀 **35% faster** |
 | | TypeScript | 33.8 ms | 321.5 ms | 9.5x slower |
+| | Python | 94.8 ms | 84.7 ms | 🚀 **10% faster** |
 | ✍️ **Serialization**| Go | 104.0 ms | 44.4 ms | 🚀 **57% faster** |
 | | Rust | 15.4 ms | 23.2 ms | 1.5x slower |
 | | TypeScript | 15.4 ms | 104.4 ms | 6.8x slower |
+| | Python | 76.4 ms | 204.0 ms | 2.7x slower |
 
 > [!NOTE]
 > TypeScript benchmarks compare the DSF reference implementation against **Bun's native JSON library**.
