@@ -42,6 +42,20 @@ DSF is designed specifically for **SIMD-accelerated parsing**.
 1.  **Fixed Delimiters**: By using backticks (`` ` ``) for strings and braces `{}` for structure, DSF allows CPUs to use "vectorized" instructions to find the end of tokens without checking every single byte for escape characters or indentation levels.
 2.  **No Type Inference**: Because DSF doesn't have to guess if `123` is an int, a float, or a date (unless explicitly marked), the parser can take "fast paths" that YAML or HJSON cannot.
 
+### 3.1 DSF vs. Sonic (High-Performance JSON)
+[Sonic](https://github.com/bytedance/sonic) is an extremely fast JSON implementation for Go using JIT and SIMD.
+
+| Metric (30k entries) | **DSF** | Sonic (JSON) | Standard JSON |
+| :--- | :--- | :--- | :--- |
+| **Payload Size** | **5.13 MB** | 6.28 MB | 6.28 MB |
+| **Parsing Time** | 60.60 ms | **45.20 ms** | 88.80 ms |
+| **Serialization** | 41.40 ms | **37.00 ms** | 97.00 ms |
+
+**Analysis**:
+- **Efficiency by Design**: DSF is **18% smaller** than Sonic-produced JSON without any compression.
+- **Engineered Speed**: Sonic's JIT/SIMD engine currently outperforms the DSF Go reference implementation in raw speed. However, DSF is already **~30% faster** than the standard Go `encoding/json` library even in its unoptimized reference form.
+- **The Verdict**: While Sonic makes JSON blazing fast through engineering wizardry, DSF makes data fast by **design**. A Sonic-style implementation for DSF would theoretically outperform Sonic because the grammar removes the "escape character" bottleneck entirely.
+
 ## 4. Summary: The Sweet Spot
 
 | Use Case | Best Format | Why? |

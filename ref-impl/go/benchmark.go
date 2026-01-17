@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Open-Tech-Foundation/dsf/ref-impl/go/dsf"
+	"github.com/bytedance/sonic"
 )
 
 func generateLargeData(count int) map[string]dsf.DSFValue {
@@ -75,7 +76,16 @@ func main() {
 		json.Unmarshal(jsonBytes, &target)
 		jsonParseTotal += time.Since(start)
 	}
-	fmt.Printf("json.Unmarshal: %.2f ms\n", float64(jsonParseTotal.Milliseconds())/float64(iterations))
+	fmt.Printf("json.Unmarshal:  %.2f ms\n", float64(jsonParseTotal.Milliseconds())/float64(iterations))
+
+	var sonicParseTotal time.Duration
+	for i := 0; i < iterations; i++ {
+		start := time.Now()
+		var target interface{}
+		sonic.Unmarshal(jsonBytes, &target)
+		sonicParseTotal += time.Since(start)
+	}
+	fmt.Printf("sonic.Unmarshal: %.2f ms\n", float64(sonicParseTotal.Milliseconds())/float64(iterations))
 
 	var dsfParseTotal time.Duration
 	for i := 0; i < iterations; i++ {
@@ -93,7 +103,15 @@ func main() {
 		json.Marshal(rawData)
 		jsonStringifyTotal += time.Since(start)
 	}
-	fmt.Printf("json.Marshal:   %.2f ms\n", float64(jsonStringifyTotal.Milliseconds())/float64(iterations))
+	fmt.Printf("json.Marshal:    %.2f ms\n", float64(jsonStringifyTotal.Milliseconds())/float64(iterations))
+
+	var sonicStringifyTotal time.Duration
+	for i := 0; i < iterations; i++ {
+		start := time.Now()
+		sonic.Marshal(rawData)
+		sonicStringifyTotal += time.Since(start)
+	}
+	fmt.Printf("sonic.Marshal:   %.2f ms\n", float64(sonicStringifyTotal.Milliseconds())/float64(iterations))
 
 	var dsfStringifyTotal time.Duration
 	for i := 0; i < iterations; i++ {
