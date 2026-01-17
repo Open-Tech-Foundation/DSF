@@ -42,7 +42,7 @@ export type DSFValue =
 
 // Optimized lexer with single-pass tokenization
 export class DSFLexer {
-    private static readonly TOKEN_PATTERNS = /\/\/.*|`[^`]*`|[A-Za-z0-9_]+\([^() \t\n\r]*\)|[{}[\]:,]|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?(?![A-Za-z0-9_])|\bT\b|\bF\b|\bN\b|[A-Za-z0-9_]+|[ \t\r\n]+|./g;
+    private readonly regex = /\/\/.*|`[^`]*`|[A-Za-z0-9_]+\([^() \t\n\r]*\)|[{}[\]:,]|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?(?![A-Za-z0-9_])|\bT\b|\bF\b|\bN\b|[A-Za-z0-9_]+|[ \t\r\n]+|./g;
 
     tokens: Token[] = [];
 
@@ -52,7 +52,8 @@ export class DSFLexer {
 
     private tokenize(text: string): void {
         let match: RegExpExecArray | null;
-        const regex = DSFLexer.TOKEN_PATTERNS;
+        const regex = this.regex;
+        regex.lastIndex = 0; // ensure we start from the beginning
 
         while ((match = regex.exec(text)) !== null) {
             const value = match[0];
@@ -98,7 +99,14 @@ export class DSFLexer {
                 case '7':
                 case '8':
                 case '9':
-                    kind = 'NUMBER';
+                    // Check if it's truly a number according to our regex
+                    if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value)) {
+                        kind = 'NUMBER';
+                    } else if (value.includes('(')) {
+                        kind = 'CONSTRUCTOR';
+                    } else {
+                        kind = 'KEY';
+                    }
                     break;
                 case 'T':
                     kind = value === 'T' ? 'BOOL_T' : (value.includes('(') ? 'CONSTRUCTOR' : 'KEY');
@@ -115,7 +123,7 @@ export class DSFLexer {
                     } else if (/[A-Za-z0-9_]/.test(ch)) {
                         kind = 'KEY';
                     } else {
-                        throw new DSFError(`Unexpected character: ${value}`);
+                        throw new DSFError(`Unexpected character: ${ch} at ${match.index}`);
                     }
             }
 
@@ -170,7 +178,8 @@ export class DSFParser {
                 return token.value!.slice(1, -1);
             case 'NUMBER':
                 this.pos++;
-                return Number(token.value);
+                const val = Number(token.value);
+                return val === 0 ? 0 : val;
             case 'BOOL_T':
                 this.pos++;
                 return true;
@@ -194,7 +203,13 @@ export class DSFParser {
 
         while (this.tokens[this.pos].kind !== 'BRACE_CLOSE') {
             const key = this.tokens[this.pos].value!;
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                throw new DSFError(`Duplicate key: ${key}`);
+            }
             this.pos++; // consume key
+            if (this.tokens[this.pos].kind !== 'COLON') {
+                throw new DSFError(`Expected ':', got ${this.tokens[this.pos].kind} after key '${key}'`);
+            }
             this.pos++; // consume ':'
             obj[key] = this.parseValue();
 
@@ -283,7 +298,8 @@ export function stringify(obj: DSFValue, indent: string | null = null): string {
             parts.push(']');
         } else if (o instanceof Date) {
             let val = o.toISOString();
-            if (val.endsWith('.000Z')) val = val.slice(0, -5) + 'Z';
+            if (val.includes('T00:00:00.000Z')) val = val.split('T')[0];
+            else if (val.endsWith('.000Z')) val = val.slice(0, -5) + 'Z';
             parts.push('D(', val, ')');
         } else if (o instanceof Uint8Array) {
             parts.push('B(');

@@ -32,6 +32,13 @@ To maintain simplicity and predictability, the following are **NOT** goals of DS
 * **Streaming Framing**: DSF is designed as a discrete document format, not a framing protocol.
 * **Comments as Data**: Comments are purely for documentation and SHOULD BE ignored by processors.
 
+### 1.3 Supplementary Documentation
+For detailed guidance on implementation and migration, see:
+* [Migration Guide (JSON → DSF)](migration-guide.md)
+* [Edge Cases & Constraints](edge-cases.md)
+* [Standardized Error Codes](error-codes.md)
+* [Comparison with Other Formats](comparison.md)
+
 ---
 
 ## 2. Character Encoding

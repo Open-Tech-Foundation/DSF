@@ -25,7 +25,14 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 ## Documentation
 
 -   [DSF 1.0 Specification (Draft)](doc/spec.md)
+-   [Migration Guide (JSON → DSF)](doc/migration-guide.md)
+-   [Edge Cases & Constraints](doc/edge-cases.md)
+-   [Standardized Error Codes](doc/error-codes.md)
 -   [Comparison with Other Formats](doc/comparison.md)
+
+## Testing
+
+-   [Conformance Test Suite](tests/conformance/tests.json)
 
 ## Reference Implementations
 

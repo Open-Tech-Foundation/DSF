@@ -1,0 +1,278 @@
+[
+  {
+    "name": "Empty Object",
+    "input": "{}",
+    "expected": {}
+  },
+  {
+    "name": "Whitespace: Extreme spacing",
+    "input": "{    a:    1 ,    b: 2    }",
+    "expected": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  {
+    "name": "Whitespace: Newlines and tabs",
+    "input": "{\n\ta: 1,\n\tb: 2\n}",
+    "expected": {
+      "a": 1,
+      "b": 2
+    }
+  },
+  {
+    "name": "Comments: Single line",
+    "input": "{\n  // This is a comment\n  a: 1\n}",
+    "expected": {
+      "a": 1
+    }
+  },
+  {
+    "name": "Comments: Trailing on line",
+    "input": "{ a: 1 // comment\n }",
+    "expected": {
+      "a": 1
+    }
+  },
+  {
+    "name": "Identifiers: Leading digits",
+    "input": "{ 123key: 1 }",
+    "expected": {
+      "123key": 1
+    }
+  },
+  {
+    "name": "Identifiers: Underscores",
+    "input": "{ _key_: 1, ___: 2 }",
+    "expected": {
+      "_key_": 1,
+      "___": 2
+    }
+  },
+  {
+    "name": "Identifiers: Mixed case",
+    "input": "{ Key: 1, key: 2 }",
+    "expected": {
+      "Key": 1,
+      "key": 2
+    }
+  },
+  {
+    "name": "Numbers: Basic",
+    "input": "{ a: 123, b: -456 }",
+    "expected": {
+      "a": 123,
+      "b": -456
+    }
+  },
+  {
+    "name": "Numbers: Zero",
+    "input": "{ a: 0, b: -0 }",
+    "expected": {
+      "a": 0,
+      "b": 0
+    }
+  },
+  {
+    "name": "Numbers: Floats",
+    "input": "{ a: 3.14, b: -0.001 }",
+    "expected": {
+      "a": 3.14,
+      "b": -0.001
+    }
+  },
+  {
+    "name": "Numbers: Exponents",
+    "input": "{ a: 1e10, b: 2.5E-3, c: 1.2e+5 }",
+    "expected": {
+      "a": 10000000000,
+      "b": 0.0025,
+      "c": 120000
+    }
+  },
+  {
+    "name": "Booleans and Null",
+    "input": "{ t: T, f: F, n: N }",
+    "expected": {
+      "t": true,
+      "f": false,
+      "n": null
+    }
+  },
+  {
+    "name": "Strings: Multi-line",
+    "input": "{ msg: `Line 1\nLine 2` }",
+    "expected": {
+      "msg": "Line 1\nLine 2"
+    }
+  },
+  {
+    "name": "Strings: Symbols and Unicode",
+    "input": "{ msg: `Hello 世界! @#$%^&*()` }",
+    "expected": {
+      "msg": "Hello 世界! @#$%^&*()"
+    }
+  },
+  {
+    "name": "Arrays: Nested and Trailing Comma",
+    "input": "{ a: [1, [2, 3,], 4,] }",
+    "expected": {
+      "a": [
+        1,
+        [
+          2,
+          3
+        ],
+        4
+      ]
+    }
+  },
+  {
+    "name": "Objects: Nested and Trailing Comma",
+    "input": "{ a: { b: { c: 1, }, }, }",
+    "expected": {
+      "a": {
+        "b": {
+          "c": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "Constructor: Date (Short)",
+    "input": "{ d: D(2026-01-15) }",
+    "expected": {
+      "d": "$date:2026-01-15"
+    }
+  },
+  {
+    "name": "Constructor: Date (ISO)",
+    "input": "{ d: D(2026-01-15T12:00:00Z) }",
+    "expected": {
+      "d": "$date:2026-01-15"
+    }
+  },
+  {
+    "name": "Constructor: Big Number",
+    "input": "{ bn: BN(12345678901234567890) }",
+    "expected": {
+      "bn": "$bigint:12345678901234567890"
+    }
+  },
+  {
+    "name": "Constructor: Binary (Uppercase)",
+    "input": "{ b: B(48454C4C4F) }",
+    "expected": {
+      "b": "$binary:48454C4C4F"
+    }
+  },
+  {
+    "name": "Constructor: Binary (Lowercase)",
+    "input": "{ b: B(48454c4c4f) }",
+    "expected": {
+      "b": "$binary:48454C4C4F"
+    }
+  },
+  {
+    "name": "Constructor: BN (Negative)",
+    "input": "{ bn: BN(-123) }",
+    "expected": {
+      "bn": "$bigint:-123"
+    }
+  },
+  {
+    "name": "Invalid: Duplicate Key",
+    "input": "{ a: 1, a: 2 }",
+    "error": "ERR_DUPLICATE_KEY"
+  },
+  {
+    "name": "Invalid: Quoted Key",
+    "input": "{ \"key\": 1 }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Key with Space",
+    "input": "{ my key: 1 }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Dot in Key",
+    "input": "{ a.b: 1 }",
+    "error": "ERR_INVALID_IDENTIFIER"
+  },
+  {
+    "name": "Invalid: Root Array",
+    "input": "[]",
+    "error": "ERR_ROOT_NOT_OBJECT"
+  },
+  {
+    "name": "Invalid: Root String",
+    "input": "`hello`",
+    "error": "ERR_ROOT_NOT_OBJECT"
+  },
+  {
+    "name": "Invalid: Number Leading Zero",
+    "input": "{ a: 0123 }",
+    "error": "ERR_INVALID_NUMBER"
+  },
+  {
+    "name": "Invalid: Number Trailing Dot",
+    "input": "{ a: 1. }",
+    "error": "ERR_INVALID_NUMBER"
+  },
+  {
+    "name": "Invalid: String with Backtick",
+    "input": "{ s: `oops` ` }",
+    "error": "ERR_INVALID_STRING"
+  },
+  {
+    "name": "Invalid: Unknown Constructor",
+    "input": "{ x: MyType(123) }",
+    "error": "ERR_UNKNOWN_CONSTRUCTOR"
+  },
+  {
+    "name": "Invalid: Constructor Nested",
+    "input": "{ x: BN(BN(1)) }",
+    "error": "ERR_NESTED_CONSTRUCTOR"
+  },
+  {
+    "name": "Invalid: Empty Constructor Payload",
+    "input": "{ x: BN() }",
+    "error": "ERR_INVALID_CONSTRUCTOR_PAYLOAD"
+  },
+  {
+    "name": "Invalid: Non-ASCII code in Key",
+    "input": "{ 🔑: 1 }",
+    "error": "ERR_INVALID_IDENTIFIER"
+  },
+  {
+    "name": "Invalid: Unclosed Array",
+    "input": "{ a: [1, 2 }",
+    "error": "ERR_UNTERMINATED"
+  },
+  {
+    "name": "Invalid: Unclosed Object",
+    "input": "{ a: { b: 1 }",
+    "error": "ERR_UNTERMINATED"
+  },
+  {
+    "name": "Invalid: Unclosed String",
+    "input": "{ a: `hello }",
+    "error": "ERR_UNTERMINATED"
+  },
+  {
+    "name": "Invalid: Missing Colon",
+    "input": "{ a 1 }",
+    "error": "ERR_MISSING_COLON"
+  },
+  {
+    "name": "Invalid: Missing Comma",
+    "input": "{ a: 1 b: 2 }",
+    "error": "ERR_MISSING_COMMA"
+  },
+  {
+    "name": "Invalid: Trailing Data",
+    "input": "{ a: 1 } extra",
+    "error": "ERR_SYNTAX"
+  }
+]
