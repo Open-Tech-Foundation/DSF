@@ -243,7 +243,7 @@ Arrays use square brackets `[]`.
 }
 ```
 
-* Elements are comma-separated
+* Elements **MUST** be comma-separated
 * Trailing commas are allowed
 
 ---
@@ -262,6 +262,7 @@ Objects use curly braces `{}`.
 ```
 
 * Duplicate keys within the same object are **errors**
+* Members **MUST** be comma-separated
 * Trailing commas are allowed
 
 ---
@@ -345,7 +346,7 @@ Represents arbitrary binary data.
 
 ## 15. Trailing Commas
 
-Trailing commas are **allowed** in:
+Trailing commas are **optional** but allowed in:
 
 * Objects
 * Arrays

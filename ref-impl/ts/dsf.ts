@@ -143,19 +143,6 @@ export class DSFParser {
         this.tokens = tokens;
     }
 
-    private peek(): Token {
-        return this.tokens[this.pos];
-    }
-
-    private consume(expectedKind?: TokenKind): string {
-        const token = this.tokens[this.pos];
-        if (expectedKind && token.kind !== expectedKind) {
-            throw new DSFError(`Expected ${expectedKind}, got ${token.kind}`);
-        }
-        this.pos++;
-        return token.value!;
-    }
-
     parse(): { [key: string]: DSFValue } {
         const result = this.parseObject();
         if (this.tokens[this.pos].kind !== 'EOF') {
@@ -216,7 +203,7 @@ export class DSFParser {
             if (this.tokens[this.pos].kind === 'COMMA') {
                 this.pos++;
             } else if (this.tokens[this.pos].kind !== 'BRACE_CLOSE') {
-                throw new DSFError(`Expected ',' or '}', got ${this.tokens[this.pos].kind}`);
+                throw new DSFError(`Expected ',' or '}', got ${this.tokens[this.pos].kind} after value for key '${key}'`);
             }
         }
 
@@ -351,4 +338,7 @@ export function parse(text: string): { [key: string]: DSFValue } {
     const lexer = new DSFLexer(text);
     const parser = new DSFParser(lexer.tokens);
     return parser.parse();
+}
+export function format(text: string): string {
+    return stringify(parse(text), '  ');
 }
