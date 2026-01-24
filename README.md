@@ -2,6 +2,8 @@
 
 A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation).
 
+**[🚀 Try the DTXT Playground](https://open-tech-foundation.github.io/DTXT/)**
+
 > [!CAUTION]
 > **EXPERIMENTAL PRE-RELEASE**
 >
