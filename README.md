@@ -1,4 +1,4 @@
-# DTXT — Data Structure Format
+# DTXT — Data Text Format
 
 A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation).
 
@@ -9,7 +9,7 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 
 ## Overview
 
->**DTXT (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
+>**DTXT (Data Text Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
 
 ![JSON vs DTXT Comparison](assets/json_vs_dtxt.png)
 

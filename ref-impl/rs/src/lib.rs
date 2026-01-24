@@ -6,7 +6,7 @@ use pyo3::types::{PyDict, PyList, PyString};
 use pyo3::IntoPyObjectExt;
 
 #[derive(Debug)]
-pub enum DSFError {
+pub enum DTXTError {
     UnexpectedChar(usize, char),
     UnexpectedEOF,
     InvalidNumber(String),
@@ -14,22 +14,22 @@ pub enum DSFError {
     TrailingData(usize),
 }
 
-impl fmt::Display for DSFError {
+impl fmt::Display for DTXTError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            DSFError::UnexpectedChar(pos, ch) => write!(f, "Unexpected char at {}: {}", pos, ch),
-            DSFError::UnexpectedEOF => write!(f, "Unexpected end of file"),
-            DSFError::InvalidNumber(s) => write!(f, "Invalid number: {}", s),
-            DSFError::InvalidConstructor(s) => write!(f, "Invalid constructor: {}", s),
-            DSFError::TrailingData(pos) => write!(f, "Trailing data at position {}", pos),
+            DTXTError::UnexpectedChar(pos, ch) => write!(f, "Unexpected char at {}: {}", pos, ch),
+            DTXTError::UnexpectedEOF => write!(f, "Unexpected end of file"),
+            DTXTError::InvalidNumber(s) => write!(f, "Invalid number: {}", s),
+            DTXTError::InvalidConstructor(s) => write!(f, "Invalid constructor: {}", s),
+            DTXTError::TrailingData(pos) => write!(f, "Trailing data at position {}", pos),
         }
     }
 }
 
-impl std::error::Error for DSFError {}
+impl std::error::Error for DTXTError {}
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DSFValue<'a> {
+pub enum DTXTValue<'a> {
     String(&'a str),
     Number(f64),
     Bool(bool),
@@ -37,16 +37,16 @@ pub enum DSFValue<'a> {
     BigInt(i64),
     Date(&'a str),
     Bytes(Vec<u8>),
-    Array(Vec<DSFValue<'a>>),
-    Object(FxHashMap<&'a str, DSFValue<'a>>),
+    Array(Vec<DTXTValue<'a>>),
+    Object(FxHashMap<&'a str, DTXTValue<'a>>),
 }
 
-pub struct DSFParser<'a> {
+pub struct DTXTParser<'a> {
     input: &'a [u8],
     pos: usize,
 }
 
-impl<'a> DSFParser<'a> {
+impl<'a> DTXTParser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             input: input.as_bytes(),
@@ -92,43 +92,43 @@ impl<'a> DSFParser<'a> {
         self.input.get(self.pos + 1).copied()
     }
 
-    pub fn parse(&mut self) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
+    pub fn parse(&mut self) -> Result<FxHashMap<&'a str, DTXTValue<'a>>, DTXTError> {
         self.skip_whitespace();
         let result = self.parse_object()?;
         self.skip_whitespace();
         if self.pos < self.input.len() {
-            return Err(DSFError::TrailingData(self.pos));
+            return Err(DTXTError::TrailingData(self.pos));
         }
         Ok(result)
     }
 
     #[inline]
-    fn parse_value(&mut self) -> Result<DSFValue<'a>, DSFError> {
+    fn parse_value(&mut self) -> Result<DTXTValue<'a>, DTXTError> {
         self.skip_whitespace();
         match self.current() {
-            Some(b'{') => Ok(DSFValue::Object(self.parse_object()?)),
-            Some(b'[') => Ok(DSFValue::Array(self.parse_array()?)),
-            Some(b'`') => Ok(DSFValue::String(self.parse_string()?)),
-            Some(b'-') | Some(b'0'..=b'9') => Ok(DSFValue::Number(self.parse_number()?)),
+            Some(b'{') => Ok(DTXTValue::Object(self.parse_object()?)),
+            Some(b'[') => Ok(DTXTValue::Array(self.parse_array()?)),
+            Some(b'`') => Ok(DTXTValue::String(self.parse_string()?)),
+            Some(b'-') | Some(b'0'..=b'9') => Ok(DTXTValue::Number(self.parse_number()?)),
             Some(b'T') if self.peek_next() != Some(b'(') => {
                 self.advance();
-                Ok(DSFValue::Bool(true))
+                Ok(DTXTValue::Bool(true))
             }
             Some(b'F') if self.peek_next() != Some(b'(') => {
                 self.advance();
-                Ok(DSFValue::Bool(false))
+                Ok(DTXTValue::Bool(false))
             }
             Some(b'N') if self.peek_next() != Some(b'(') => {
                 self.advance();
-                Ok(DSFValue::Null)
+                Ok(DTXTValue::Null)
             }
             Some(b'A'..=b'Z') | Some(b'a'..=b'z') | Some(b'_') => self.parse_constructor(),
-            Some(ch) => Err(DSFError::UnexpectedChar(self.pos, ch as char)),
-            None => Err(DSFError::UnexpectedEOF),
+            Some(ch) => Err(DTXTError::UnexpectedChar(self.pos, ch as char)),
+            None => Err(DTXTError::UnexpectedEOF),
         }
     }
 
-    fn parse_object(&mut self) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
+    fn parse_object(&mut self) -> Result<FxHashMap<&'a str, DTXTValue<'a>>, DTXTError> {
         self.advance(); // skip '{'
         let mut map = FxHashMap::default();
 
@@ -138,7 +138,7 @@ impl<'a> DSFParser<'a> {
             self.skip_whitespace();
 
             if self.current() != Some(b':') {
-                return Err(DSFError::UnexpectedChar(self.pos, self.current().map(|c| c as char).unwrap_or('\0')));
+                return Err(DTXTError::UnexpectedChar(self.pos, self.current().map(|c| c as char).unwrap_or('\0')));
             }
             self.advance(); // skip ':'
 
@@ -156,7 +156,7 @@ impl<'a> DSFParser<'a> {
         Ok(map)
     }
 
-    fn parse_array(&mut self) -> Result<Vec<DSFValue<'a>>, DSFError> {
+    fn parse_array(&mut self) -> Result<Vec<DTXTValue<'a>>, DTXTError> {
         self.advance(); // skip '['
         let mut arr = Vec::new();
 
@@ -176,7 +176,7 @@ impl<'a> DSFParser<'a> {
     }
 
     #[inline(always)]
-    fn parse_key(&mut self) -> Result<&'a str, DSFError> {
+    fn parse_key(&mut self) -> Result<&'a str, DTXTError> {
         let start = self.pos;
         let bytes = self.input;
         let len = bytes.len();
@@ -194,7 +194,7 @@ impl<'a> DSFParser<'a> {
         unsafe { Ok(std::str::from_utf8_unchecked(&bytes[start..i])) }
     }
 
-    fn parse_string(&mut self) -> Result<&'a str, DSFError> {
+    fn parse_string(&mut self) -> Result<&'a str, DTXTError> {
         self.advance(); // skip opening '`'
         let start = self.pos;
         if let Some(end) = memchr(b'`', &self.input[start..]) {
@@ -203,11 +203,11 @@ impl<'a> DSFParser<'a> {
             // Unsafe because we already validated the presence of closing '`' and assume valid UTF-8 input
             unsafe { Ok(std::str::from_utf8_unchecked(&self.input[start..abs_end])) }
         } else {
-            Err(DSFError::UnexpectedEOF)
+            Err(DTXTError::UnexpectedEOF)
         }
     }
 
-    fn parse_number(&mut self) -> Result<f64, DSFError> {
+    fn parse_number(&mut self) -> Result<f64, DTXTError> {
         let start = self.pos;
         if self.current() == Some(b'-') { self.advance(); }
         if self.current() == Some(b'0') {
@@ -225,12 +225,12 @@ impl<'a> DSFParser<'a> {
             while matches!(self.current(), Some(b'0'..=b'9')) { self.advance(); }
         }
         let num_str = std::str::from_utf8(&self.input[start..self.pos])
-            .map_err(|_| DSFError::InvalidNumber("invalid utf8".to_string()))?;
+            .map_err(|_| DTXTError::InvalidNumber("invalid utf8".to_string()))?;
         num_str.parse::<f64>()
-            .map_err(|_| DSFError::InvalidNumber(num_str.to_string()))
+            .map_err(|_| DTXTError::InvalidNumber(num_str.to_string()))
     }
 
-    fn parse_constructor(&mut self) -> Result<DSFValue<'a>, DSFError> {
+    fn parse_constructor(&mut self) -> Result<DTXTValue<'a>, DTXTError> {
         let start = self.pos;
         while let Some(ch) = self.current() {
             if ch.is_ascii_alphanumeric() || ch == b'_' {
@@ -240,77 +240,77 @@ impl<'a> DSFParser<'a> {
             }
         }
         let type_name = std::str::from_utf8(&self.input[start..self.pos])
-            .map_err(|_| DSFError::InvalidConstructor("invalid utf8".to_string()))?;
+            .map_err(|_| DTXTError::InvalidConstructor("invalid utf8".to_string()))?;
 
         if self.current() != Some(b'(') {
-            return Err(DSFError::InvalidConstructor(type_name.to_string()));
+            return Err(DTXTError::InvalidConstructor(type_name.to_string()));
         }
         self.advance(); // skip '('
 
         let payload_start = self.pos;
         while self.current() != Some(b')') {
             if self.pos >= self.input.len() {
-                return Err(DSFError::UnexpectedEOF);
+                return Err(DTXTError::UnexpectedEOF);
             }
             self.advance();
         }
         let payload = std::str::from_utf8(&self.input[payload_start..self.pos])
-            .map_err(|_| DSFError::InvalidConstructor("invalid utf8 in payload".to_string()))?;
+            .map_err(|_| DTXTError::InvalidConstructor("invalid utf8 in payload".to_string()))?;
         self.advance(); // skip ')'
 
         match type_name {
-            "D" => Ok(DSFValue::Date(payload)),
+            "D" => Ok(DTXTValue::Date(payload)),
             "BN" => {
                 let num = payload.parse::<i64>()
-                    .map_err(|_| DSFError::InvalidConstructor(format!("BN({})", payload)))?;
-                Ok(DSFValue::BigInt(num))
+                    .map_err(|_| DTXTError::InvalidConstructor(format!("BN({})", payload)))?;
+                Ok(DTXTValue::BigInt(num))
             }
             "B" => {
                 let mut bytes = Vec::with_capacity(payload.len() / 2);
                 for i in (0..payload.len()).step_by(2) {
                     let byte = u8::from_str_radix(&payload[i..i+2], 16)
-                        .map_err(|_| DSFError::InvalidConstructor(format!("B({})", payload)))?;
+                        .map_err(|_| DTXTError::InvalidConstructor(format!("B({})", payload)))?;
                     bytes.push(byte);
                 }
-                Ok(DSFValue::Bytes(bytes))
+                Ok(DTXTValue::Bytes(bytes))
             }
-            _ => Err(DSFError::InvalidConstructor(type_name.to_string())),
+            _ => Err(DTXTError::InvalidConstructor(type_name.to_string())),
         }
     }
 }
 
 // Stringifier
-pub fn stringify(value: &DSFValue, indent: Option<&str>) -> String {
+pub fn stringify(value: &DTXTValue, indent: Option<&str>) -> String {
     let mut result = String::with_capacity(1024);
     stringify_value(value, &mut result, indent, 0);
     result
 }
 
-fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, level: usize) {
+fn stringify_value(value: &DTXTValue, out: &mut String, indent: Option<&str>, level: usize) {
     match value {
-        DSFValue::String(s) => {
+        DTXTValue::String(s) => {
             out.push('`');
             out.push_str(s);
             out.push('`');
         }
-        DSFValue::Number(n) => {
+        DTXTValue::Number(n) => {
             let mut buf = ryu::Buffer::new();
             out.push_str(buf.format(*n));
         }
-        DSFValue::Bool(true) => out.push('T'),
-        DSFValue::Bool(false) => out.push('F'),
-        DSFValue::Null => out.push('N'),
-        DSFValue::BigInt(n) => {
+        DTXTValue::Bool(true) => out.push('T'),
+        DTXTValue::Bool(false) => out.push('F'),
+        DTXTValue::Null => out.push('N'),
+        DTXTValue::BigInt(n) => {
             out.push_str("BN(");
             out.push_str(&n.to_string());
             out.push(')');
         }
-        DSFValue::Date(s) => {
+        DTXTValue::Date(s) => {
             out.push_str("D(");
             out.push_str(s);
             out.push(')');
         }
-        DSFValue::Bytes(bytes) => {
+        DTXTValue::Bytes(bytes) => {
             out.push_str("B(");
             for byte in bytes {
                 const HEX: &[u8; 16] = b"0123456789ABCDEF";
@@ -319,7 +319,7 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
             }
             out.push(')');
         }
-        DSFValue::Array(arr) => {
+        DTXTValue::Array(arr) => {
             if arr.is_empty() {
                 out.push_str("[]");
                 return;
@@ -341,7 +341,7 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
             }
             out.push(']');
         }
-        DSFValue::Object(map) => {
+        DTXTValue::Object(map) => {
             if map.is_empty() {
                 out.push_str("{}");
                 return;
@@ -375,20 +375,20 @@ fn stringify_value(value: &DSFValue, out: &mut String, indent: Option<&str>, lev
 
 // Public API
 #[inline]
-pub fn parse<'a>(input: &'a str) -> Result<FxHashMap<&'a str, DSFValue<'a>>, DSFError> {
-    let mut parser = DSFParser::new(input);
+pub fn parse<'a>(input: &'a str) -> Result<FxHashMap<&'a str, DTXTValue<'a>>, DTXTError> {
+    let mut parser = DTXTParser::new(input);
     parser.parse()
 }
 
 // --- Python Bindings (Single-pass Optimization) ---
 
-struct PyDSFParser<'py, 'a> {
+struct PyDTXTParser<'py, 'a> {
     py: Python<'py>,
     input: &'a [u8],
     pos: usize,
 }
 
-impl<'py, 'a> PyDSFParser<'py, 'a> {
+impl<'py, 'a> PyDTXTParser<'py, 'a> {
     fn new(py: Python<'py>, input: &'a str) -> Self {
         Self { py, input: input.as_bytes(), pos: 0 }
     }
@@ -510,7 +510,7 @@ impl<'py, 'a> PyDSFParser<'py, 'a> {
 
 #[pyfunction]
 fn loads(py: Python<'_>, input: &str) -> PyResult<PyObject> {
-    let mut parser = PyDSFParser::new(py, input);
+    let mut parser = PyDTXTParser::new(py, input);
     parser.skip_whitespace();
     let result = parser.parse_object()?;
     Ok(result.into())
@@ -526,7 +526,7 @@ fn dumps(obj: PyObject) -> PyResult<String> {
 }
 
 #[pymodule]
-fn dsf_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn dtxt_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(loads, m)?)?;
     m.add_function(wrap_pyfunction!(dumps, m)?)?;
     Ok(())
@@ -547,7 +547,7 @@ mod tests {
     fn test_array() {
         let input = "{items: [1, 2, 3]}";
         let result = parse(input).unwrap();
-        if let Some(DSFValue::Array(arr)) = result.get("items") {
+        if let Some(DTXTValue::Array(arr)) = result.get("items") {
             assert_eq!(arr.len(), 3);
         } else {
             panic!("Expected array");

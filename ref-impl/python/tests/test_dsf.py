@@ -2,13 +2,13 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import dsf
+import dtxt
 from datetime import datetime, date
 import binascii
 
 def test_spec_example():
     spec_example = """
-// DSF example
+// DTXT example
 {
   name: `Sample`,
   created: D(2026-01-15),
@@ -24,7 +24,7 @@ def test_spec_example():
   },
 }
 """
-    parsed = dsf.loads(spec_example)
+    parsed = dtxt.loads(spec_example)
     print("Parsed Example Successfully")
     
     assert parsed['name'] == 'Sample'
@@ -40,26 +40,26 @@ def test_spec_example():
     assert parsed['meta']['enabled'] is False
 
     # Round trip
-    dumped = dsf.dumps(parsed)
+    dumped = dtxt.dumps(parsed)
     print("Dumped (Canonical):", dumped)
     
-    reparsed = dsf.loads(dumped)
+    reparsed = dtxt.loads(dumped)
     assert reparsed == parsed
     print("Round trip successful")
 
 def test_comments_and_whitespace():
-    dsf_text = "{ // comment\n  a: 1, \n /* not supported */ \n b: 2 }"
+    dtxt_text = "{ // comment\n  a: 1, \n /* not supported */ \n b: 2 }"
     # The lexer should fail on /* if not supported, but the spec only mentions //
     # My lexer will treat /* as mismatch if it's not handled.
     try:
-        dsf.loads(dsf_text)
-    except dsf.DSFError as e:
+        dtxt.loads(dtxt_text)
+    except dtxt.DTXTError as e:
         print("Expected error for /*:", e)
         assert "Unexpected character" in str(e)
 
 def test_keys():
-    dsf_text = "{ 123key: T, _key: F, Key9: N }"
-    parsed = dsf.loads(dsf_text)
+    dtxt_text = "{ 123key: T, _key: F, Key9: N }"
+    parsed = dtxt.loads(dtxt_text)
     assert parsed['123key'] is True
     assert parsed['_key'] is False
     assert parsed['Key9'] is None

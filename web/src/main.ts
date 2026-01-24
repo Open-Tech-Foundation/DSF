@@ -95,7 +95,7 @@ app.innerHTML = `
           </div>
           <button id="format-btn" class="action-btn">Format</button>
         </div>
-        <textarea id="dsf-input" spellcheck="false">${SAMPLES.welcome}</textarea>
+        <textarea id="dtxt-input" spellcheck="false">${SAMPLES.welcome}</textarea>
       </div>
 
       <div class="editor-pane">
@@ -114,7 +114,7 @@ app.innerHTML = `
 
     <div class="stats-container">
       <div class="stat-card">
-        <div class="stat-value" id="dsf-size">0 B</div>
+        <div class="stat-value" id="dtxt-size">0 B</div>
         <div class="stat-label">DTXT Payload</div>
       </div>
       <div class="stat-card">
@@ -129,19 +129,19 @@ app.innerHTML = `
 
     <footer>
       Created by the <a href="https://github.com/Open-Tech-Foundation">Open Tech Foundation</a>. 
-      Read the <a href="https://github.com/Open-Tech-Foundation/dsf/blob/main/doc/spec.md">Spec</a>.
+      Read the <a href="https://github.com/Open-Tech-Foundation/dtxt/blob/main/doc/spec.md">Spec</a>.
     </footer>
   </div>
 `;
 
-const dsfInput = document.querySelector<HTMLTextAreaElement>('#dsf-input')!;
+const dtxtInput = document.querySelector<HTMLTextAreaElement>('#dtxt-input')!;
 const formatBtn = document.querySelector<HTMLButtonElement>('#format-btn')!;
 const outputView = document.querySelector<HTMLTextAreaElement>('#output-view')!;
 const sampleSelect = document.querySelector<HTMLSelectElement>('#sample-select')!;
 const formatSelect = document.querySelector<HTMLSelectElement>('#format-select')!;
 const outputExt = document.querySelector<HTMLSpanElement>('#output-ext')!;
 
-const dsfSizeEl = document.querySelector<HTMLDivElement>('#dsf-size')!;
+const dtxtSizeEl = document.querySelector<HTMLDivElement>('#dtxt-size')!;
 const targetSizeEl = document.querySelector<HTMLDivElement>('#target-size')!;
 const targetLabelEl = document.querySelector<HTMLDivElement>('#target-label')!;
 const reductionEl = document.querySelector<HTMLDivElement>('#reduction-pct')!;
@@ -163,7 +163,7 @@ function updateStats(dtxtText: string, targetText: string, formatName: string) {
 
   const reduction = targetBytes > 0 ? ((targetBytes - dtxtBytes) / targetBytes * 100).toFixed(1) : '0.0';
 
-  dsfSizeEl.textContent = formatBytes(dtxtBytes);
+  dtxtSizeEl.textContent = formatBytes(dtxtBytes);
   targetSizeEl.textContent = formatBytes(targetBytes);
   targetLabelEl.textContent = `${formatName} Equivalent`;
   reductionEl.textContent = reduction + '%';
@@ -257,7 +257,7 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
 };
 
 function updateOutput() {
-  const dtxtText = dsfInput.value;
+  const dtxtText = dtxtInput.value;
   const targetFormatId = formatSelect.value;
   const formatInfo = FORMATS.find(f => f.id === targetFormatId)!;
 
@@ -295,18 +295,18 @@ function updateFromOutput() {
     const parsed = handler.parse(outputText);
     const dtxtText = stringify(parsed, '  ');
 
-    dsfInput.classList.remove('error');
-    dsfInput.value = dtxtText;
+    dtxtInput.classList.remove('error');
+    dtxtInput.value = dtxtText;
 
     updateStats(dtxtText, outputText, formatInfo.name);
   } catch (e: any) {
-    dsfInput.classList.add('error');
+    dtxtInput.classList.add('error');
   }
 }
 
 let isUpdating = false;
 
-dsfInput.addEventListener('input', () => {
+dtxtInput.addEventListener('input', () => {
   if (isUpdating) return;
   isUpdating = true;
   updateOutput();
@@ -323,7 +323,7 @@ outputView.addEventListener('input', () => {
 
 sampleSelect.addEventListener('change', () => {
   const sampleName = sampleSelect.value as keyof typeof SAMPLES;
-  dsfInput.value = SAMPLES[sampleName];
+  dtxtInput.value = SAMPLES[sampleName];
   updateOutput();
 });
 
@@ -335,8 +335,8 @@ formatSelect.addEventListener('change', () => {
 
 formatBtn.addEventListener('click', () => {
   try {
-    const formatted = format(dsfInput.value);
-    dsfInput.value = formatted;
+    const formatted = format(dtxtInput.value);
+    dtxtInput.value = formatted;
     updateOutput();
   } catch (e) {
     alert("Cannot format invalid DTXT code");

@@ -1,6 +1,6 @@
 # DTXT vs. Other Data Formats
 
-This document provides a technical comparison between **DTXT (Data Structure Format)** and other established human-readable data formats.
+This document provides a technical comparison between **DTXT (Data Text Format)** and other established human-readable data formats.
 
 ## 1. Feature Matrix
 

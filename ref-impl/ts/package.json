@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "ts-node-esm test_dsf.ts"
+    "test": "ts-node-esm test_dtxt.ts"
   },
   "keywords": [],
   "author": "",

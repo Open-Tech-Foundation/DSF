@@ -1,10 +1,10 @@
 [package]
-name = "dsf"
+name = "dtxt"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "dsf_rs"
+name = "dtxt_rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
