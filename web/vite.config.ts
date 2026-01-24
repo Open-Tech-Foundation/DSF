@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    base: '/dtxt/',
+    base: './',
     root: '.',
     build: {
         outDir: 'dist',
