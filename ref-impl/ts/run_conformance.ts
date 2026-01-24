@@ -1,4 +1,4 @@
-import * as dsf from './dsf';
+import * as dtxt from './dtxt';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as assert from 'assert';
@@ -14,7 +14,7 @@ function runTests() {
 
     for (const test of tests) {
         try {
-            const parsed = dsf.parse(test.input);
+            const parsed = dtxt.parse(test.input);
 
             if (test.error) {
                 console.error(`FAIL: ${test.name} - Expected error ${test.error}, but it parsed successfully. Result:`, parsed);

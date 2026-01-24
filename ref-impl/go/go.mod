@@ -1,4 +1,4 @@
-module github.com/Open-Tech-Foundation/dsf/ref-impl/go
+module github.com/Open-Tech-Foundation/dtxt/ref-impl/go
 
 go 1.25.1
 

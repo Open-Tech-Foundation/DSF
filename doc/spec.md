@@ -1,4 +1,4 @@
-# DSF 1.0 — Data Structure Format (Experimental Draft)
+# DTXT 1.0 — Data Text Format (Experimental Draft)
 
 **By the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)**
 
@@ -9,10 +9,10 @@
 
 ## 1. Overview
 
-**DSF (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange.
+**DTXT (Data Text Format)** is a human-readable, structured data format designed for configuration and data interchange.
 
-A DSF document represents a **single object**, explicitly delimited by `{}`.
-DSF emphasizes:
+A DTXT document represents a **single object**, explicitly delimited by `{}`.
+DTXT emphasizes:
 
 * strict and predictable syntax
 * fast parsing
@@ -21,20 +21,20 @@ DSF emphasizes:
 * human readability without implicit semantics
 
 ### 1.1 Media Type
-The formal media type for DSF is:
-`application/dsf`
+The formal media type for DTXT is:
+`application/dtxt`
 
 ### 1.2 Non-Goals
-To maintain simplicity and predictability, the following are **NOT** goals of DSF:
-* **Programming Logic**: DSF has no execution semantics, variables, or functions.
-* **Schema Validation**: DSF provides explicit typing, but does not define a schema language.
-* **Resource Referencing**: DSF does not support internal references (anchors) or external imports.
-* **Streaming Framing**: DSF is designed as a discrete document format, not a framing protocol.
+To maintain simplicity and predictability, the following are **NOT** goals of DTXT:
+* **Programming Logic**: DTXT has no execution semantics, variables, or functions.
+* **Schema Validation**: DTXT provides explicit typing, but does not define a schema language.
+* **Resource Referencing**: DTXT does not support internal references (anchors) or external imports.
+* **Streaming Framing**: DTXT is designed as a discrete document format, not a framing protocol.
 * **Comments as Data**: Comments are purely for documentation and SHOULD BE ignored by processors.
 
 ### 1.3 Supplementary Documentation
 For detailed guidance on implementation and migration, see:
-* [Migration Guide (JSON → DSF)](migration-guide.md)
+* [Migration Guide (JSON → DTXT)](migration-guide.md)
 * [Edge Cases & Constraints](edge-cases.md)
 * [Standardized Error Codes](error-codes.md)
 * [Comparison with Other Formats](comparison.md)
@@ -43,7 +43,7 @@ For detailed guidance on implementation and migration, see:
 
 ## 2. Character Encoding
 
-* DSF documents **MUST** be encoded in **UTF-8**.
+* DTXT documents **MUST** be encoded in **UTF-8**.
 * Parsers **MUST** reject invalid UTF-8 input.
 
 ---
@@ -64,10 +64,10 @@ Canonical output **SHOULD** normalize line endings to `\n`.
 
 ## 4. Comments
 
-* DSF supports **single-line comments** only.
+* DTXT supports **single-line comments** only.
 * A comment begins with `//` and continues until the end of the line.
 
-```dsf
+```dtxt
 // This is a comment
 key: 123, // trailing comment
 ```
@@ -76,9 +76,9 @@ key: 123, // trailing comment
 
 ## 5. Document Structure (Root Object)
 
-A DSF document **MUST** consist of a single object enclosed in `{}`.
+A DTXT document **MUST** consist of a single object enclosed in `{}`.
 
-```dsf
+```dtxt
 {
   name: `example`,
   count: 10,
@@ -103,7 +103,7 @@ A DSF document **MUST** consist of a single object enclosed in `{}`.
 * No spaces allowed
 * Leading digits **ARE allowed**
 
-```dsf
+```dtxt
 {
   a: 1,
   user_id: 2,
@@ -120,7 +120,7 @@ A DSF document **MUST** consist of a single object enclosed in `{}`.
 * Unicode characters
 * Quoted keys
 
-```dsf
+```dtxt
 {
   user.name: 1,   // ❌ invalid
   "user": 2,      // ❌ invalid
@@ -130,7 +130,7 @@ A DSF document **MUST** consist of a single object enclosed in `{}`.
 #### Rationale
 
 Dots are commonly interpreted as hierarchical path separators in other systems.
-DSF enforces **explicit structure only**, avoiding implied nesting.
+DTXT enforces **explicit structure only**, avoiding implied nesting.
 
 ---
 
@@ -140,7 +140,7 @@ DSF enforces **explicit structure only**, avoiding implied nesting.
 
 They have **no special meaning when used as keys**.
 
-```dsf
+```dtxt
 {
   T: 1,
   F: 2,
@@ -168,11 +168,11 @@ A value may be one of the following:
 
 ### 8.1 Number Grammar
 
-DSF numbers follow **JSON number grammar**.
+DTXT numbers follow **JSON number grammar**.
 
 Supported:
 
-```dsf
+```dtxt
 0
 123
 -42
@@ -194,7 +194,7 @@ Not supported:
 ### 8.2 Numeric Semantics
 
 * Precision is implementation-defined.
-* DSF does not guarantee arbitrary precision for normal numbers.
+* DTXT does not guarantee arbitrary precision for normal numbers.
 * Use `BN(...)` for exact large integers.
 
 ---
@@ -203,7 +203,7 @@ Not supported:
 
 Strings are used for arbitrary textual data.
 
-```dsf
+```dtxt
 {
   name: `Sample`,
   message: `Hello "World"`,
@@ -212,9 +212,9 @@ Strings are used for arbitrary textual data.
 
 ### 9.1 Rules
 * **Delimiter**: Strings **MUST** be enclosed in backticks (`` ` ``).
-* **Backticks within Strings**: The backtick character is **NOT** allowed inside a string in DSF 1.0.
+* **Backticks within Strings**: The backtick character is **NOT** allowed inside a string in DTXT 1.0.
 * **Newlines**: Literals newlines are **ALLOWED** and preserved.
-* **Escaping**: DSF 1.0 does **NOT** support escape sequences (e.g., `\n`, `\t`). All characters (except the delimiter) are treated literally.
+* **Escaping**: DTXT 1.0 does **NOT** support escape sequences (e.g., `\n`, `\t`). All characters (except the delimiter) are treated literally.
 
 #### Rationale
 Excluding escapes and internal delimiters ensures that strings can be scanned with a single pass using simple byte comparison (`memchr`), maximizing parsing speed.
@@ -237,7 +237,7 @@ Excluding escapes and internal delimiters ensures that strings can be scanned wi
 
 Arrays use square brackets `[]`.
 
-```dsf
+```dtxt
 {
   values: [1, 2, 3],
 }
@@ -252,7 +252,7 @@ Arrays use square brackets `[]`.
 
 Objects use curly braces `{}`.
 
-```dsf
+```dtxt
 {
   config: {
     enabled: T,
@@ -289,7 +289,7 @@ Rules:
 * Constructors are declarative, not executable
 
 ### 13.1 Strict Constructor Policy
-DSF 1.0 enforces a closed set of constructors. Only types defined in this specification are valid.
+DTXT 1.0 enforces a closed set of constructors. Only types defined in this specification are valid.
 *   **Unknown Types**: Any constructor name not explicitly defined in the Standard Constructors section **MUST** result in a parse error.
 *   **No Custom Extensions**: User-defined or vendor-defined constructors are not supported in this version.
 
@@ -299,20 +299,20 @@ DSF 1.0 enforces a closed set of constructors. Only types defined in this specif
 
 ### 14.1 Date / DateTime — `D(...)`
 
-```dsf
+```dtxt
 D(2026-01-15)
 D(2026-01-15T10:30:00Z)
 ```
 
 * Payload is an ISO-8601 date or datetime token
-* DSF does not distinguish date-only vs datetime syntactically
-* DSF does not validate ISO correctness
+* DTXT does not distinguish date-only vs datetime syntactically
+* DTXT does not validate ISO correctness
 
 ---
 
 ### 14.2 Big Number — `BN(...)`
 
-```dsf
+```dtxt
 BN(9007199254740993)
 ```
 
@@ -330,7 +330,7 @@ Canonicalization:
 
 ### 14.3 Binary — `B(...)`
 
-```dsf
+```dtxt
 B(89504E470D0A1A0A)
 ```
 
@@ -351,7 +351,7 @@ Trailing commas are **optional** but allowed in:
 * Objects
 * Arrays
 
-```dsf
+```dtxt
 {
   a: 1,
   b: 2,
@@ -362,9 +362,9 @@ Trailing commas are **optional** but allowed in:
 
 ## 16. Canonical Form (Normative)
 
-To ensure interoperability and reproducible hashing/signing, a DSF document **MUST** be converted to its Canonical Form when transmitted in environments requiring determinism.
+To ensure interoperability and reproducible hashing/signing, a DTXT document **MUST** be converted to its Canonical Form when transmitted in environments requiring determinism.
 
-A Canonical DSF document **MUST**:
+A Canonical DTXT document **MUST**:
 1.  **Normalization**: Use uppercase for literals (`T`, `F`, `N`) and constructor names (`D`, `BN`, `B`).
 2.  **Line Endings**: Use a single line feed (`\n`) for all newlines.
 3.  **No Indentation**: Remove all unnecessary whitespace between tokens.
@@ -377,7 +377,7 @@ A Canonical DSF document **MUST**:
 
 ## 17. JSON Interoperability (Recommended)
 
-| DSF       | JSON         |
+| DTXT      | JSON         |
 | --------- | ------------ |
 | Number    | number       |
 | `T` / `F` | true / false |
@@ -405,7 +405,7 @@ Parsers MUST report errors for:
 
 ## 19. Security Considerations
 
-* DSF has no execution semantics.
+* DTXT has no execution semantics.
 * Binary and big-number payloads may be attacker-controlled.
 
 ### 19.1 Implementation Limits
@@ -421,8 +421,8 @@ Implementations MAY provide configuration to increase these limits for specific 
 
 ## 20. Example
 
-```dsf
-// DSF example
+```dtxt
+// DTXT example
 {
   name: `Sample`,
   created: D(2026-01-15),
@@ -443,10 +443,10 @@ Implementations MAY provide configuration to increase these limits for specific 
 
 ## 21. Appendix A: Formal EBNF Grammar
 
-The following is a formal description of DSF 1.0 using Extended Backus-Naur Form (EBNF).
+The following is a formal description of DTXT 1.0 using Extended Backus-Naur Form (EBNF).
 
 ```ebnf
-(* DSF 1.0 Grammar *)
+(* DTXT 1.0 Grammar *)
 
 document      = ws object ws ;
 

@@ -1,10 +1,10 @@
-# DSF vs. Other Data Formats
+# DTXT vs. Other Data Formats
 
-This document provides a technical comparison between **DSF (Data Structure Format)** and other established human-readable data formats.
+This document provides a technical comparison between **DTXT (Data Structure Format)** and other established human-readable data formats.
 
 ## 1. Feature Matrix
 
-| Feature | JSON | XML | YAML | TOML | JSON5 | **DSF** |
+| Feature | JSON | XML | YAML | TOML | JSON5 | **DTXT** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Comments** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Unquoted Keys** | ❌ | N/A | ✅ | ✅ | ✅ | ✅ |
@@ -21,47 +21,47 @@ This document provides a technical comparison between **DSF (Data Structure Form
 
 ## 2. Deep Dives
 
-### 2.1 DSF vs. JSON
+### 2.1 DTXT vs. JSON
 *   **The Problem with JSON**: No comments, mandatory double quotes on keys, and no way to distinguish a "Date" string from a "Normal" string without a schema.
-*   **The DSF Solution**: DSF maintains JSON's simplicity but adds the "Developer Qualities of Life" (comments, unquoted keys) and **Constructor Literals** to solve the typing problem without needing a sidecar schema file.
+*   **The DTXT Solution**: DTXT maintains JSON's simplicity but adds the "Developer Qualities of Life" (comments, unquoted keys) and **Constructor Literals** to solve the typing problem without needing a sidecar schema file.
 
-### 2.2 DSF vs. YAML
+### 2.2 DTXT vs. YAML
 *   **The Problem with YAML**: YAML is notoriously complex (the "Norway Problem" — where `NO` is parsed as a boolean `false`). It is also slow because parsing depends on indentation and complex state machines.
-*   **The DSF Solution**: DSF is **deterministic**. It uses braces `{}` instead of indentation, making it massivley faster and predictable. There is no "magic" type inference in DSF; if you want a type, you use a constructor.
+*   **The DTXT Solution**: DTXT is **deterministic**. It uses braces `{}` instead of indentation, making it massivley faster and predictable. There is no "magic" type inference in DTXT; if you want a type, you use a constructor.
 
-### 2.3 DSF vs. TOML
+### 2.3 DTXT vs. TOML
 *   **The Problem with TOML**: TOML is great for flat configurations but becomes "noisy" and hard to read when dealing with deeply nested objects (requiring many `[header.sub.item]` blocks).
-*   **The DSF Solution**: DSF uses C-style braces which naturally scale to any depth. While TOML is better for simple `config.ini` style files, DSF is superior for structured data interchange.
+*   **The DTXT Solution**: DTXT uses C-style braces which naturally scale to any depth. While TOML is better for simple `config.ini` style files, DTXT is superior for structured data interchange.
 
 ---
 
-## 3. Why DSF is "Record-Breaking"
+## 3. Why DTXT is "Record-Breaking"
 
-DSF is designed specifically for **SIMD-accelerated parsing**. 
+DTXT is designed specifically for **SIMD-accelerated parsing**. 
 
-1.  **Fixed Delimiters**: By using backticks (`` ` ``) for strings and braces `{}` for structure, DSF allows CPUs to use "vectorized" instructions to find the end of tokens without checking every single byte for escape characters or indentation levels.
-2.  **No Type Inference**: Because DSF doesn't have to guess if `123` is an int, a float, or a date (unless explicitly marked), the parser can take "fast paths" that YAML or HJSON cannot.
+1.  **Fixed Delimiters**: By using backticks (`` ` ``) for strings and braces `{}` for structure, DTXT allows CPUs to use "vectorized" instructions to find the end of tokens without checking every single byte for escape characters or indentation levels.
+2.  **No Type Inference**: Because DTXT doesn't have to guess if `123` is an int, a float, or a date (unless explicitly marked), the parser can take "fast paths" that YAML or HJSON cannot.
 
-### 3.1 DSF vs. Sonic (High-Performance JSON)
+### 3.1 DTXT vs. Sonic (High-Performance JSON)
 [Sonic](https://github.com/bytedance/sonic) is an extremely fast JSON implementation for Go using JIT and SIMD.
 
-| Metric (30k entries) | **DSF** | Sonic (JSON) | Standard JSON |
+| Metric (30k entries) | **DTXT** | Sonic (JSON) | Standard JSON |
 | :--- | :--- | :--- | :--- |
 | **Payload Size** | **5.13 MB** | 6.28 MB | 6.28 MB |
 | **Parsing Time** | 60.60 ms | **45.20 ms** | 88.80 ms |
 | **Serialization** | 41.40 ms | **37.00 ms** | 97.00 ms |
 
 **Analysis**:
-- **Efficiency by Design**: DSF is **18% smaller** than Sonic-produced JSON without any compression.
-- **Engineered Speed**: Sonic's JIT/SIMD engine currently outperforms the DSF Go reference implementation in raw speed. However, DSF is already **~30% faster** than the standard Go `encoding/json` library even in its unoptimized reference form.
-- **The Verdict**: While Sonic makes JSON blazing fast through engineering wizardry, DSF makes data fast by **design**. A Sonic-style implementation for DSF would theoretically outperform Sonic because the grammar removes the "escape character" bottleneck entirely.
+- **Efficiency by Design**: DTXT is **18% smaller** than Sonic-produced JSON without any compression.
+- **Engineered Speed**: Sonic's JIT/SIMD engine currently outperforms the DTXT Go reference implementation in raw speed. However, DTXT is already **~30% faster** than the standard Go `encoding/json` library even in its unoptimized reference form.
+- **The Verdict**: While Sonic makes JSON blazing fast through engineering wizardry, DTXT makes data fast by **design**. A Sonic-style implementation for DTXT would theoretically outperform Sonic because the grammar removes the "escape character" bottleneck entirely.
 
 ## 4. Summary: The Sweet Spot
 
 | Use Case | Best Format | Why? |
 | :--- | :--- | :--- |
 | **Simple Config** | TOML | Cleanest for flat key-value pairs. |
-| **Complex Structure** | **DSF** | Handles depth gracefully and lightning fast. |
-| **Extreme Speed** | **DSF** | Outperforms even native JSON implementations. |
+| **Complex Structure** | **DTXT** | Handles depth gracefully and lightning fast. |
+| **Extreme Speed** | **DTXT** | Outperforms even native JSON implementations. |
 | **Legacy Support** | JSON | Universal compatibility. |
-| **Documentation-heavy** | YAML/DSF | Both support comments, but DSF is safer. |
+| **Documentation-heavy** | YAML/DTXT | Both support comments, but DTXT is safer. |

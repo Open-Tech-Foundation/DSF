@@ -1,7 +1,7 @@
-import { format } from './dsf.ts';
+import { format } from './dtxt.ts';
 
 const input = `{
-  title: \`Welcome to DSF\`
+  title: \`Welcome to DTXT\`
   features: [
     \`Fast\`
     \`Clean\`

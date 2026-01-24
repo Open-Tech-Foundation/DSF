@@ -1,17 +1,17 @@
-# DSF — Data Structure Format
+# DTXT — Data Structure Format
 
 A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation).
 
 > [!CAUTION]
 > **EXPERIMENTAL PRE-RELEASE**
 >
-> DSF is currently in an experimental, pre-release state. The specification and implementations provided here are for research and feedback purposes only. APIs and document grammar are subject to breaking changes.
+> DTXT is currently in an experimental, pre-release state. The specification and implementations provided here are for research and feedback purposes only. APIs and document grammar are subject to breaking changes.
 
 ## Overview
 
->**DSF (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
+>**DTXT (Data Structure Format)** is a human-readable, structured data format designed for configuration and data interchange. It emphasizes predictability, fast parsing, and explicit typing via constructor literals.
 
-![JSON vs DSF Comparison](assets/json_vs_dsf.png)
+![JSON vs DTXT Comparison](assets/json_vs_dtxt.png)
 
 ### Key Features
 
@@ -24,8 +24,8 @@ A project of the [Open Tech Foundation](https://github.com/Open-Tech-Foundation)
 
 ## Documentation
 
--   [DSF 1.0 Specification (Draft)](doc/spec.md)
--   [Migration Guide (JSON → DSF)](doc/migration-guide.md)
+-   [DTXT 1.0 Specification (Draft)](doc/spec.md)
+-   [Migration Guide (JSON → DTXT)](doc/migration-guide.md)
 -   [Edge Cases & Constraints](doc/edge-cases.md)
 -   [Standardized Error Codes](doc/error-codes.md)
 -   [Comparison with Other Formats](doc/comparison.md)
@@ -46,11 +46,11 @@ The `ref-impl/` directory contains reference implementations for various languag
 ## 📊 Benchmark Results
 
 
-DSF consistently achieves a **reduced payload size** (16%–20%) compared to JSON. Most notably, optimized DSF implementations can **outperform native JSON parsers** in speed.
+DTXT consistently achieves a **reduced payload size** (16%–20%) compared to JSON. Most notably, optimized DTXT implementations can **outperform native JSON parsers** in speed.
 
 ### Key Metrics (30,000 entries)
 
-| metric | language | JSON | DSF | difference |
+| metric | language | JSON | DTXT | difference |
 | :--- | :--- | :--- | :--- | :--- |
 | 📏 **Payload Size** | Go | 6.28 MB | 5.13 MB | 📉 **-18.3%** |
 | | Rust | 6.45 MB | 5.13 MB | 📉 **-20.5%** |
@@ -66,7 +66,7 @@ DSF consistently achieves a **reduced payload size** (16%–20%) compared to JSO
 | | Python | 76.4 ms | 204.0 ms | 2.7x slower |
 
 > [!NOTE]
-> TypeScript benchmarks compare the DSF reference implementation against **Bun's native JSON library**.
+> TypeScript benchmarks compare the DTXT reference implementation against **Bun's native JSON library**.
 
 
 

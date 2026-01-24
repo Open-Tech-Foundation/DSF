@@ -1,5 +1,5 @@
 import './style.css';
-import { DSFLexer, DSFParser, stringify, format } from '../../ref-impl/ts/dsf.ts';
+import { DTXTLexer, DTXTParser, stringify, format } from '../../ref-impl/ts/dtxt.ts';
 
 declare const jsyaml: any;
 declare const JSON5: any;
@@ -11,7 +11,7 @@ declare const CBOR: any;
 const SAMPLES = {
   // ... (SAMPLES remain same)
   welcome: `{
-  title: \`Welcome to DSF\`,
+  title: \`Welcome to DTXT\`,
   version: 1.0,
   features: [
     \`Predictable\`,
@@ -68,7 +68,7 @@ const FORMATS = [
   { id: 'yaml', name: 'YAML', ext: '.yaml', bidirectional: true },
   { id: 'toml', name: 'TOML', ext: '.toml', bidirectional: true },
   { id: 'xml', name: 'XML', ext: '.xml', bidirectional: true },
-  { id: 'minified', name: 'Minified DSF', ext: '.dsf', bidirectional: true },
+  { id: 'minified', name: 'Minified DTXT', ext: '.dtxt', bidirectional: true },
   { id: 'msgpack', name: 'MsgPack (Hex)', ext: '.msgpack', bidirectional: false },
   { id: 'cbor', name: 'CBOR (Hex)', ext: '.cbor', bidirectional: false },
 ];
@@ -78,15 +78,15 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   <div class="container">
     <header>
-      <h1>DSF Playground</h1>
-      <p class="subtitle">Experience the future of predictable, high-performance data interchange. Edit DSF on the left, see results on the right.</p>
+      <h1>DTXT Playground</h1>
+      <p class="subtitle">Experience the future of predictable, high-performance data interchange. Edit DTXT on the left, see results on the right.</p>
     </header>
 
     <main class="playground">
       <div class="editor-pane">
         <div class="pane-header">
           <div class="header-left">
-            <span class="label">DSF Input</span>
+            <span class="label">DTXT Input</span>
             <select id="sample-select">
               <option value="welcome">Welcome</option>
               <option value="users">User Profile</option>
@@ -115,7 +115,7 @@ app.innerHTML = `
     <div class="stats-container">
       <div class="stat-card">
         <div class="stat-value" id="dsf-size">0 B</div>
-        <div class="stat-label">DSF Payload</div>
+        <div class="stat-label">DTXT Payload</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="target-size">0 B</div>
@@ -151,8 +151,8 @@ function formatBytes(bytes: number) {
   return (bytes / 1024).toFixed(2) + ' KB';
 }
 
-function updateStats(dsfText: string, targetText: string, formatName: string) {
-  const dsfBytes = new TextEncoder().encode(dsfText).length;
+function updateStats(dtxtText: string, targetText: string, formatName: string) {
+  const dtxtBytes = new TextEncoder().encode(dtxtText).length;
   let targetBytes: number;
   const currentFormat = formatSelect.value;
   if (currentFormat === 'msgpack' || currentFormat === 'cbor') {
@@ -161,9 +161,9 @@ function updateStats(dsfText: string, targetText: string, formatName: string) {
     targetBytes = new TextEncoder().encode(targetText).length;
   }
 
-  const reduction = targetBytes > 0 ? ((targetBytes - dsfBytes) / targetBytes * 100).toFixed(1) : '0.0';
+  const reduction = targetBytes > 0 ? ((targetBytes - dtxtBytes) / targetBytes * 100).toFixed(1) : '0.0';
 
-  dsfSizeEl.textContent = formatBytes(dsfBytes);
+  dsfSizeEl.textContent = formatBytes(dtxtBytes);
   targetSizeEl.textContent = formatBytes(targetBytes);
   targetLabelEl.textContent = `${formatName} Equivalent`;
   reductionEl.textContent = reduction + '%';
@@ -233,8 +233,8 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
   minified: {
     serialize: (obj) => stringify(obj, null),
     parse: (text) => {
-      const lexer = new DSFLexer(text);
-      const parser = new DSFParser(lexer.tokens);
+      const lexer = new DTXTLexer(text);
+      const parser = new DTXTParser(lexer.tokens);
       return parser.parse();
     }
   },
@@ -257,13 +257,13 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
 };
 
 function updateOutput() {
-  const dsfText = dsfInput.value;
+  const dtxtText = dsfInput.value;
   const targetFormatId = formatSelect.value;
   const formatInfo = FORMATS.find(f => f.id === targetFormatId)!;
 
   try {
-    const lexer = new DSFLexer(dsfText);
-    const parser = new DSFParser(lexer.tokens);
+    const lexer = new DTXTLexer(dtxtText);
+    const parser = new DTXTParser(lexer.tokens);
     const parsed = parser.parse();
 
     outputView.classList.remove('error');
@@ -274,7 +274,7 @@ function updateOutput() {
     outputView.value = outputText;
     outputExt.textContent = formatInfo.ext;
 
-    updateStats(dsfText, outputText, formatInfo.name);
+    updateStats(dtxtText, outputText, formatInfo.name);
 
   } catch (e: any) {
     outputView.classList.add('error');
@@ -293,12 +293,12 @@ function updateFromOutput() {
     if (!handler || !handler.parse) return;
 
     const parsed = handler.parse(outputText);
-    const dsfText = stringify(parsed, '  ');
+    const dtxtText = stringify(parsed, '  ');
 
     dsfInput.classList.remove('error');
-    dsfInput.value = dsfText;
+    dsfInput.value = dtxtText;
 
-    updateStats(dsfText, outputText, formatInfo.name);
+    updateStats(dtxtText, outputText, formatInfo.name);
   } catch (e: any) {
     dsfInput.classList.add('error');
   }
@@ -339,7 +339,7 @@ formatBtn.addEventListener('click', () => {
     dsfInput.value = formatted;
     updateOutput();
   } catch (e) {
-    alert("Cannot format invalid DSF code");
+    alert("Cannot format invalid DTXT code");
   }
 });
 

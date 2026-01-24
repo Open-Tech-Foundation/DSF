@@ -1,6 +1,6 @@
-# DSF Error Code Standard (1.0)
+# DTXT Error Code Standard (1.0)
 
-To provide consistent feedback across different implementations, DSF parsers SHOULD use the following standardized error codes.
+To provide consistent feedback across different implementations, DTXT parsers SHOULD use the following standardized error codes.
 
 ## General Syntax Errors
 - **`ERR_SYNTAX`**: General parsing failure when no more specific error applies.

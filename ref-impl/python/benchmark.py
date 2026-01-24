@@ -1,8 +1,8 @@
-import dsf
+import dtxt
 try:
-    import dsf_rs
+    import dtxt_rs
 except ImportError:
-    dsf_rs = None
+    dtxt_rs = None
 import json
 import time
 import random
@@ -10,7 +10,7 @@ import os
 
 def generate_large_data(count):
     data = {
-        "title": "DSF vs JSON (JSON-native types only)",
+        "title": "DTXT vs JSON (JSON-native types only)",
         "description": "Benchmark for base format overhead (unquoted keys, short literals)",
         "entries": []
     }
@@ -21,7 +21,7 @@ def generate_large_data(count):
             "uid": f"user-{i}",
             "isActive": i % 2 == 0,
             "score": random.random() * 1000,
-            "tags": ["data", "benchmark", "storage", "json", "dsf"],
+            "tags": ["data", "benchmark", "storage", "json", "dtxt"],
             "meta": {
                 "level": i % 10,
                 "verified": i % 3 == 0,
@@ -43,24 +43,24 @@ def run_benchmark():
 
     # 1. Payload Size Comparison
     json_str = json.dumps(raw_data)
-    dsf_str = dsf.dumps(raw_data)
+    dtxt_str = dtxt.dumps(raw_data)
 
     base_path = "../../benchmarks/python"
     json_path = os.path.join(base_path, "bench_v2.json")
-    dsf_path = os.path.join(base_path, "bench_v2.dsf")
+    dtxt_path = os.path.join(base_path, "bench_v2.dtxt")
 
     with open(json_path, "w") as f:
         f.write(json_str)
-    with open(dsf_path, "w") as f:
-        f.write(dsf_str)
+    with open(dtxt_path, "w") as f:
+        f.write(dtxt_str)
 
     json_size = os.path.getsize(json_path)
-    dsf_size = os.path.getsize(dsf_path)
+    dtxt_size = os.path.getsize(dtxt_path)
 
     print("\n--- Payload Size ---")
     print(f"JSON: {json_size / 1024 / 1024:.2f} MB")
-    print(f"DSF:  {dsf_size / 1024 / 1024:.2f} MB")
-    print(f"Reduction: {(1 - dsf_size / json_size) * 100:.1f}%")
+    print(f"DTXT:  {dtxt_size / 1024 / 1024:.2f} MB")
+    print(f"Reduction: {(1 - dtxt_size / json_size) * 100:.1f}%")
 
     # 2. Performance Comparison (Time)
     iterations = 5
@@ -74,20 +74,20 @@ def run_benchmark():
         json_parse_total += (time.perf_counter() - start) * 1000
     print(f"json.loads:  {json_parse_total / iterations:.2f} ms")
 
-    dsf_parse_total = 0
+    dtxt_parse_total = 0
     for _ in range(iterations):
         start = time.perf_counter()
-        dsf.loads(dsf_str)
-        dsf_parse_total += (time.perf_counter() - start) * 1000
-    print(f"dsf.loads:   {dsf_parse_total / iterations:.2f} ms")
+        dtxt.loads(dtxt_str)
+        dtxt_parse_total += (time.perf_counter() - start) * 1000
+    print(f"dtxt.loads:   {dtxt_parse_total / iterations:.2f} ms")
 
-    if dsf_rs:
-        dsf_rs_parse_total = 0
+    if dtxt_rs:
+        dtxt_rs_parse_total = 0
         for _ in range(iterations):
             start = time.perf_counter()
-            dsf_rs.loads(dsf_str)
-            dsf_rs_parse_total += (time.perf_counter() - start) * 1000
-        print(f"dsf_rs.loads: {dsf_rs_parse_total / iterations:.2f} ms")
+            dtxt_rs.loads(dtxt_str)
+            dtxt_rs_parse_total += (time.perf_counter() - start) * 1000
+        print(f"dtxt_rs.loads: {dtxt_rs_parse_total / iterations:.2f} ms")
 
     print("\n--- Serialization Performance (Average of 5 runs) ---")
 
@@ -98,12 +98,12 @@ def run_benchmark():
         json_stringify_total += (time.perf_counter() - start) * 1000
     print(f"json.dumps:  {json_stringify_total / iterations:.2f} ms")
 
-    dsf_stringify_total = 0
+    dtxt_stringify_total = 0
     for _ in range(iterations):
         start = time.perf_counter()
-        dsf.dumps(raw_data)
-        dsf_stringify_total += (time.perf_counter() - start) * 1000
-    print(f"dsf.dumps:   {dsf_stringify_total / iterations:.2f} ms")
+        dtxt.dumps(raw_data)
+        dtxt_stringify_total += (time.perf_counter() - start) * 1000
+    print(f"dtxt.dumps:   {dtxt_stringify_total / iterations:.2f} ms")
 
 if __name__ == "__main__":
     run_benchmark()
