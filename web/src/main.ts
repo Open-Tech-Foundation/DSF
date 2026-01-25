@@ -1,12 +1,12 @@
 import './style.css';
 import { DTXTLexer, DTXTParser, stringify, format } from '../../ref-impl/ts/dtxt.ts';
 
-declare const jsyaml: any;
-declare const JSON5: any;
-declare const toml: any;
-declare const fxp: any;
-declare const msgpack: any;
-declare const CBOR: any;
+import jsyaml from 'js-yaml';
+import JSON5 from 'json5';
+import * as TOML from 'smol-toml';
+import * as fxp from 'fast-xml-parser';
+import msgpack from 'msgpack-lite';
+import * as CBOR from 'cbor-js';
 
 const SAMPLES = {
   // ... (SAMPLES remain same)
@@ -193,38 +193,33 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
   },
   json5: {
     serialize: (obj) => {
-      if (typeof JSON5 === 'undefined') return "Error: JSON5 not loaded";
       return JSON5.stringify(prepareForSerialization(obj), null, 2);
     },
     parse: (text) => JSON5.parse(text)
   },
   yaml: {
     serialize: (obj) => {
-      if (typeof jsyaml === 'undefined') return "Error: js-yaml not loaded";
       return jsyaml.dump(prepareForSerialization(obj), { indent: 2, lineWidth: -1 });
     },
     parse: (text) => jsyaml.load(text)
   },
   toml: {
     serialize: (obj) => {
-      if (typeof toml === 'undefined') return "Error: toml not loaded";
       try {
-        return toml.stringify(prepareForSerialization(obj));
+        return TOML.stringify(prepareForSerialization(obj) as any);
       } catch (e: any) {
         // fallback for objects that might fail due to nesting rules or other TOML constraints
         return `# Error: ${e.message}\n` + JSON.stringify(prepareForSerialization(obj), null, 2);
       }
     },
-    parse: (text) => toml.parse(text)
+    parse: (text) => TOML.parse(text)
   },
   xml: {
     serialize: (obj) => {
-      if (typeof fxp === 'undefined') return "Error: fast-xml-parser not loaded";
       const builder = new fxp.XMLBuilder({ format: true, ignoreAttributes: false });
       return builder.build({ root: prepareForSerialization(obj) });
     },
     parse: (text) => {
-      if (typeof fxp === 'undefined') return "Error: fast-xml-parser not loaded";
       const parser = new fxp.XMLParser();
       const res = parser.parse(text);
       return res.root || res;
@@ -240,7 +235,6 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
   },
   msgpack: {
     serialize: (obj) => {
-      if (typeof msgpack === 'undefined') return "Error: msgpack-lite not loaded";
       const buffer = msgpack.encode(prepareForSerialization(obj));
       return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
     }
@@ -248,7 +242,6 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
   },
   cbor: {
     serialize: (obj) => {
-      if (typeof CBOR === 'undefined') return "Error: cbor-js not loaded";
       const buffer = CBOR.encode(prepareForSerialization(obj));
       // CBOR.encode returns an ArrayBuffer or similar
       return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
