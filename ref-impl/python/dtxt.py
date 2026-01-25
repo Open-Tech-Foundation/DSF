@@ -163,10 +163,25 @@ class DTXTParser:
         else:
             raise DTXTError(f"Unknown constructor: {type_name}")
 
+try:
+    import dtxt_rs
+except ImportError:
+    dtxt_rs = None
+
 def load(dtxt_text):
+    if dtxt_rs:
+        try:
+            return dtxt_rs.loads(dtxt_text)
+        except Exception:
+            # Fallback to pure Python on error or nested constructors not handled by simplified Rust PyO3 bridge
+            pass
+            
     lexer = DTXTLexer(dtxt_text)
     parser = DTXTParser(lexer.tokens)
     return parser.parse()
+
+def loads(dtxt_text):
+    return load(dtxt_text)
 
 def dumps(obj):
     if isinstance(obj, dict):
@@ -228,6 +243,3 @@ def dumps_canonical(obj, indent=None):
             return dumps(o)
             
     return _dump(obj, 0)
-
-def loads(dtxt_text):
-    return load(dtxt_text)

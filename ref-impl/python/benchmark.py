@@ -72,22 +72,27 @@ def run_benchmark():
         start = time.perf_counter()
         json.loads(json_str)
         json_parse_total += (time.perf_counter() - start) * 1000
-    print(f"json.loads:  {json_parse_total / iterations:.2f} ms")
+    print(f"json.loads:     {json_parse_total / iterations:.2f} ms")
 
-    dtxt_parse_total = 0
+    # Force pure Python for comparison
+    original_rs = dtxt.dtxt_rs
+    dtxt.dtxt_rs = None
+    pure_python_parse_total = 0
     for _ in range(iterations):
         start = time.perf_counter()
         dtxt.loads(dtxt_str)
-        dtxt_parse_total += (time.perf_counter() - start) * 1000
-    print(f"dtxt.loads:   {dtxt_parse_total / iterations:.2f} ms")
+        pure_python_parse_total += (time.perf_counter() - start) * 1000
+    print(f"dtxt.loads (Pure Python): {pure_python_parse_total / iterations:.2f} ms")
+    dtxt.dtxt_rs = original_rs
 
-    if dtxt_rs:
-        dtxt_rs_parse_total = 0
+    if dtxt.dtxt_rs:
+        rust_ext_parse_total = 0
         for _ in range(iterations):
             start = time.perf_counter()
-            dtxt_rs.loads(dtxt_str)
-            dtxt_rs_parse_total += (time.perf_counter() - start) * 1000
-        print(f"dtxt_rs.loads: {dtxt_rs_parse_total / iterations:.2f} ms")
+            dtxt.loads(dtxt_str)
+            rust_ext_parse_total += (time.perf_counter() - start) * 1000
+        print(f"dtxt.loads (Rust Ext):    {rust_ext_parse_total / iterations:.2f} ms")
+        print(f"Speedup: {pure_python_parse_total / rust_ext_parse_total:.1f}x")
 
     print("\n--- Serialization Performance (Average of 5 runs) ---")
 

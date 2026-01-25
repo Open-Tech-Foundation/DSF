@@ -54,18 +54,18 @@ DTXT consistently achieves a **reduced payload size** (16%–20%) compared to JS
 
 | metric | language | JSON | DTXT | difference |
 | :--- | :--- | :--- | :--- | :--- |
-| 📏 **Payload Size** | Go | 6.28 MB | 5.13 MB | 📉 **-18.3%** |
-| | Rust | 6.45 MB | 5.13 MB | 📉 **-20.5%** |
-| | TypeScript | 6.28 MB | 5.25 MB | 📉 **-16.5%** |
-| | Python | 7.08 MB | 5.93 MB | 📉 **-16.2%** |
-| ⏱️ **Parsing Time** | Go | 99.6 ms | 63.2 ms | 🚀 **37% faster** |
-| | Rust | 72.2 ms | 47.1 ms | 🚀 **35% faster** |
-| | TypeScript | 33.8 ms | 321.5 ms | 9.5x slower |
-| | Python | 94.8 ms | 84.7 ms | 🚀 **10% faster** |
-| ✍️ **Serialization**| Go | 104.0 ms | 44.4 ms | 🚀 **57% faster** |
-| | Rust | 15.4 ms | 23.2 ms | 1.5x slower |
-| | TypeScript | 15.4 ms | 104.4 ms | 6.8x slower |
-| | Python | 76.4 ms | 204.0 ms | 2.7x slower |
+| 📏 **Payload Size** | Go | 6.31 MB | 5.16 MB | 📉 **-18.2%** |
+| | Rust | 6.31 MB | 5.33 MB | 📉 **-15.5%** |
+| | TypeScript | 6.31 MB | 5.28 MB | 📉 **-16.4%** |
+| | Python | 7.11 MB | 5.96 MB | 📉 **-16.2%** |
+| ⏱️ **Parsing Time** | Go | 90.6 ms | 67.6 ms | 🚀 **25% faster** |
+| | Rust | 72.2 ms | 50.8 ms | 🚀 **30% faster** |
+| | TypeScript | 40.0 ms | 326.1 ms | 8.1x slower |
+| | Python (Rust Ext)| 102.5 ms | 93.4 ms | 🚀 **9% faster** |
+| ✍️ **Serialization**| Go | 103.8 ms | 49.2 ms | 🚀 **52% faster** |
+| | Rust | 15.4 ms | 37.5 ms | 2.4x slower |
+| | TypeScript | 24.5 ms | 178.1 ms | 7.2x slower |
+| | Python | 77.3 ms | 212.0 ms | 2.7x slower |
 
 > [!NOTE]
 > TypeScript benchmarks compare the DTXT reference implementation against **Bun's native JSON library**.

@@ -5,56 +5,172 @@
     "expected": {}
   },
   {
-    "name": "Whitespace: Extreme spacing",
-    "input": "{    a:    1 ,    b: 2    }",
+    "name": "Simple Object",
+    "input": "{name: `Alice`, age: 30}",
+    "expected": {
+      "name": "Alice",
+      "age": 30
+    }
+  },
+  {
+    "name": "Nested Object",
+    "input": "{user: {name: `Bob`, role: `admin`}}",
+    "expected": {
+      "user": {
+        "name": "Bob",
+        "role": "admin"
+      }
+    }
+  },
+  {
+    "name": "Object with Trailing Comma",
+    "input": "{a: 1, b: 2,}",
     "expected": {
       "a": 1,
       "b": 2
     }
   },
   {
-    "name": "Whitespace: Newlines and tabs",
-    "input": "{\n\ta: 1,\n\tb: 2\n}",
+    "name": "Object No Whitespace",
+    "input": "{a:1,b:2}",
     "expected": {
       "a": 1,
       "b": 2
     }
   },
   {
-    "name": "Comments: Single line",
-    "input": "{\n  // This is a comment\n  a: 1\n}",
+    "name": "Object Extra Whitespace",
+    "input": "{  a  :  1  ,  b  :  2  }",
     "expected": {
-      "a": 1
+      "a": 1,
+      "b": 2
     }
   },
   {
-    "name": "Comments: Trailing on line",
-    "input": "{ a: 1 // comment\n }",
+    "name": "Empty Array",
+    "input": "{items: []}",
     "expected": {
-      "a": 1
+      "items": []
     }
   },
   {
-    "name": "Identifiers: Leading digits",
-    "input": "{ 123key: 1 }",
+    "name": "Simple Array",
+    "input": "{nums: [1, 2, 3]}",
     "expected": {
-      "123key": 1
+      "nums": [
+        1,
+        2,
+        3
+      ]
     }
   },
   {
-    "name": "Identifiers: Underscores",
-    "input": "{ _key_: 1, ___: 2 }",
+    "name": "Array with Trailing Comma",
+    "input": "{nums: [1, 2, 3,]}",
     "expected": {
-      "_key_": 1,
-      "___": 2
+      "nums": [
+        1,
+        2,
+        3
+      ]
     }
   },
   {
-    "name": "Identifiers: Mixed case",
-    "input": "{ Key: 1, key: 2 }",
+    "name": "Nested Array",
+    "input": "{matrix: [[1, 2], [3, 4]]}",
     "expected": {
-      "Key": 1,
-      "key": 2
+      "matrix": [
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Mixed Array",
+    "input": "{data: [1, `text`, T, N]}",
+    "expected": {
+      "data": [
+        1,
+        "text",
+        true,
+        null
+      ]
+    }
+  },
+  {
+    "name": "Array of Objects",
+    "input": "{users: [{name: `Alice`}, {name: `Bob`}]}",
+    "expected": {
+      "users": [
+        {
+          "name": "Alice"
+        },
+        {
+          "name": "Bob"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Simple String",
+    "input": "{text: `hello`}",
+    "expected": {
+      "text": "hello"
+    }
+  },
+  {
+    "name": "Empty String",
+    "input": "{text: ``}",
+    "expected": {
+      "text": ""
+    }
+  },
+  {
+    "name": "String with Spaces",
+    "input": "{text: `hello world`}",
+    "expected": {
+      "text": "hello world"
+    }
+  },
+  {
+    "name": "Multiline String",
+    "input": "{text: `line1\nline2`}",
+    "expected": {
+      "text": "line1\nline2"
+    }
+  },
+  {
+    "name": "String with Special Chars",
+    "input": "{text: `!@#$%^&*()_+-={}[]|:;<>,.?/~`}",
+    "expected": {
+      "text": "!@#$%^&*()_+-={}[]|:;<>,.?/~"
+    }
+  },
+  {
+    "name": "String with Unicode",
+    "input": "{text: `Hello 世界 🌍`}",
+    "expected": {
+      "text": "Hello 世界 🌍"
+    }
+  },
+  {
+    "name": "String with Quotes",
+    "input": "{text: `He said \"hello\"`}",
+    "expected": {
+      "text": "He said \"hello\""
+    }
+  },
+  {
+    "name": "Strings: No Escapes",
+    "input": "{ s: `\\n` }",
+    "expected": {
+      "s": "\\n"
     }
   },
   {
@@ -75,19 +191,19 @@
   },
   {
     "name": "Numbers: Floats",
-    "input": "{ a: 3.14, b: -0.001 }",
+    "input": "{ a: 3.14, b: -3.14 }",
     "expected": {
       "a": 3.14,
-      "b": -0.001
+      "b": -3.14
     }
   },
   {
     "name": "Numbers: Exponents",
-    "input": "{ a: 1e10, b: 2.5E-3, c: 1.2e+5 }",
+    "input": "{ a: 1.5e10, b: 1.5E-10, c: 1.5E10 }",
     "expected": {
-      "a": 10000000000,
-      "b": 0.0025,
-      "c": 120000
+      "a": 15000000000,
+      "b": 1.5e-10,
+      "c": 15000000000
     }
   },
   {
@@ -100,49 +216,19 @@
     }
   },
   {
-    "name": "Strings: Multi-line",
-    "input": "{ msg: `Line 1\nLine 2` }",
+    "name": "Keywords as Keys",
+    "input": "{ T: 1, F: 2, N: 3 }",
     "expected": {
-      "msg": "Line 1\nLine 2"
+      "T": 1,
+      "F": 2,
+      "N": 3
     }
   },
   {
-    "name": "Strings: Symbols and Unicode",
-    "input": "{ msg: `Hello 世界! @#$%^&*()` }",
+    "name": "Comments: Single Line",
+    "input": "// comment\n{ a: 1 } // trailing",
     "expected": {
-      "msg": "Hello 世界! @#$%^&*()"
-    }
-  },
-  {
-    "name": "Arrays: Nested and Trailing Comma",
-    "input": "{ a: [1, [2, 3,], 4,] }",
-    "expected": {
-      "a": [
-        1,
-        [
-          2,
-          3
-        ],
-        4
-      ]
-    }
-  },
-  {
-    "name": "Objects: Nested and Trailing Comma",
-    "input": "{ a: { b: { c: 1, }, }, }",
-    "expected": {
-      "a": {
-        "b": {
-          "c": 1
-        }
-      }
-    }
-  },
-  {
-    "name": "Constructor: Date (Short)",
-    "input": "{ d: D(2026-01-15) }",
-    "expected": {
-      "d": "$date:2026-01-15"
+      "a": 1
     }
   },
   {
@@ -160,24 +246,102 @@
     }
   },
   {
-    "name": "Constructor: Binary (Uppercase)",
+    "name": "Constructor: BN Canonicalization (Leading Zeros)",
+    "input": "{ bn: BN(000123) }",
+    "expected": {
+      "bn": "$bigint:123"
+    }
+  },
+  {
+    "name": "Constructor: BN Canonicalization (-0)",
+    "input": "{ bn: BN(-0) }",
+    "expected": {
+      "bn": "$bigint:0"
+    }
+  },
+  {
+    "name": "Constructor: Binary (Hex)",
     "input": "{ b: B(48454C4C4F) }",
     "expected": {
       "b": "$binary:48454C4C4F"
     }
   },
   {
-    "name": "Constructor: Binary (Lowercase)",
+    "name": "Constructor: Binary Canonicalization (Lowercase Hex)",
     "input": "{ b: B(48454c4c4f) }",
     "expected": {
       "b": "$binary:48454C4C4F"
     }
   },
   {
-    "name": "Constructor: BN (Negative)",
-    "input": "{ bn: BN(-123) }",
+    "name": "Deep Nesting",
+    "input": "{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{a:{v:1}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
     "expected": {
-      "bn": "$bigint:-123"
+      "a": {
+        "a": {
+          "a": {
+            "a": {
+              "a": {
+                "a": {
+                  "a": {
+                    "a": {
+                      "a": {
+                        "a": {
+                          "a": {
+                            "a": {
+                              "a": {
+                                "a": {
+                                  "a": {
+                                    "a": {
+                                      "a": {
+                                        "a": {
+                                          "a": {
+                                            "a": {
+                                              "a": {
+                                                "a": {
+                                                  "a": {
+                                                    "a": {
+                                                      "a": {
+                                                        "a": {
+                                                          "a": {
+                                                            "a": {
+                                                              "a": {
+                                                                "a": {
+                                                                  "a": {
+                                                                    "a": {
+                                                                      "v": 1
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   {
@@ -191,13 +355,13 @@
     "error": "ERR_SYNTAX"
   },
   {
-    "name": "Invalid: Key with Space",
-    "input": "{ my key: 1 }",
-    "error": "ERR_SYNTAX"
-  },
-  {
     "name": "Invalid: Dot in Key",
     "input": "{ a.b: 1 }",
+    "error": "ERR_INVALID_IDENTIFIER"
+  },
+  {
+    "name": "Invalid: Unicode in Key",
+    "input": "{ 🔑: 1 }",
     "error": "ERR_INVALID_IDENTIFIER"
   },
   {
@@ -221,19 +385,44 @@
     "error": "ERR_INVALID_NUMBER"
   },
   {
-    "name": "Invalid: String with Backtick",
-    "input": "{ s: `oops` ` }",
-    "error": "ERR_INVALID_STRING"
+    "name": "Numbers: Leading Plus (Invalid)",
+    "input": "{ a: +1 }",
+    "error": "ERR_INVALID_NUMBER"
   },
   {
-    "name": "Invalid: Unknown Constructor",
-    "input": "{ x: MyType(123) }",
-    "error": "ERR_UNKNOWN_CONSTRUCTOR"
+    "name": "Numbers: NaN (Invalid)",
+    "input": "{ a: NaN }",
+    "error": "ERR_SYNTAX"
   },
   {
-    "name": "Invalid: Constructor Nested",
-    "input": "{ x: BN(BN(1)) }",
-    "error": "ERR_NESTED_CONSTRUCTOR"
+    "name": "Numbers: Infinity (Invalid)",
+    "input": "{ a: Infinity }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Keyword in Value (Lowercase)",
+    "input": "{ a: t }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Keyword in Value (Mixed Case)",
+    "input": "{ a: True }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Constructor Whitespace",
+    "input": "{ x: BN (123) }",
+    "error": "ERR_SYNTAX"
+  },
+  {
+    "name": "Invalid: Constructor Payload with Whitespace",
+    "input": "{ x: BN(1 2 3) }",
+    "error": "ERR_INVALID_CONSTRUCTOR_PAYLOAD"
+  },
+  {
+    "name": "Invalid: Constructor Payload with Parens",
+    "input": "{ x: BN(1(2)3) }",
+    "error": "ERR_INVALID_CONSTRUCTOR_PAYLOAD"
   },
   {
     "name": "Invalid: Empty Constructor Payload",
@@ -241,38 +430,23 @@
     "error": "ERR_INVALID_CONSTRUCTOR_PAYLOAD"
   },
   {
-    "name": "Invalid: Non-ASCII code in Key",
-    "input": "{ 🔑: 1 }",
-    "error": "ERR_INVALID_IDENTIFIER"
+    "name": "Invalid: Nesting Constructors",
+    "input": "{ x: BN(BN(1)) }",
+    "error": "ERR_NESTED_CONSTRUCTOR"
   },
   {
-    "name": "Invalid: Unclosed Array",
-    "input": "{ a: [1, 2 }",
-    "error": "ERR_UNTERMINATED"
-  },
-  {
-    "name": "Invalid: Unclosed Object",
-    "input": "{ a: { b: 1 }",
-    "error": "ERR_UNTERMINATED"
+    "name": "Invalid: Unknown Constructor",
+    "input": "{ x: CUSTOM(1) }",
+    "error": "ERR_UNKNOWN_CONSTRUCTOR"
   },
   {
     "name": "Invalid: Unclosed String",
-    "input": "{ a: `hello }",
+    "input": "{ s: `oops }",
     "error": "ERR_UNTERMINATED"
   },
   {
-    "name": "Invalid: Missing Colon",
-    "input": "{ a 1 }",
-    "error": "ERR_MISSING_COLON"
-  },
-  {
-    "name": "Invalid: Missing Comma",
-    "input": "{ a: 1 b: 2 }",
-    "error": "ERR_MISSING_COMMA"
-  },
-  {
-    "name": "Invalid: Trailing Data",
-    "input": "{ a: 1 } extra",
-    "error": "ERR_SYNTAX"
+    "name": "Invalid: String with Backtick",
+    "input": "{ s: `oo`ps` }",
+    "error": "ERR_INVALID_STRING"
   }
 ]

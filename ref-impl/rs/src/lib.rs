@@ -1,27 +1,44 @@
 use std::fmt;
 use rustc_hash::FxHashMap;
 use memchr::memchr;
+use num_bigint::BigInt;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString};
 use pyo3::IntoPyObjectExt;
 
 #[derive(Debug)]
 pub enum DTXTError {
-    UnexpectedChar(usize, char),
-    UnexpectedEOF,
+    Syntax(usize),
+    Unterminated,
+    RootNotObject,
+    DuplicateKey(String),
+    MissingColon(usize),
+    MissingComma(usize),
+    InvalidIdentifier(usize),
     InvalidNumber(String),
-    InvalidConstructor(String),
+    InvalidString(usize),
+    UnknownConstructor(String),
+    InvalidConstructorPayload(String),
+    NestedConstructor,
     TrailingData(usize),
 }
 
 impl fmt::Display for DTXTError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            DTXTError::UnexpectedChar(pos, ch) => write!(f, "Unexpected char at {}: {}", pos, ch),
-            DTXTError::UnexpectedEOF => write!(f, "Unexpected end of file"),
-            DTXTError::InvalidNumber(s) => write!(f, "Invalid number: {}", s),
-            DTXTError::InvalidConstructor(s) => write!(f, "Invalid constructor: {}", s),
-            DTXTError::TrailingData(pos) => write!(f, "Trailing data at position {}", pos),
+            DTXTError::Syntax(pos) => write!(f, "ERR_SYNTAX at {}", pos),
+            DTXTError::Unterminated => write!(f, "ERR_UNTERMINATED"),
+            DTXTError::RootNotObject => write!(f, "ERR_ROOT_NOT_OBJECT"),
+            DTXTError::DuplicateKey(k) => write!(f, "ERR_DUPLICATE_KEY: {}", k),
+            DTXTError::MissingColon(pos) => write!(f, "ERR_MISSING_COLON at {}", pos),
+            DTXTError::MissingComma(pos) => write!(f, "ERR_MISSING_COMMA at {}", pos),
+            DTXTError::InvalidIdentifier(pos) => write!(f, "ERR_INVALID_IDENTIFIER at {}", pos),
+            DTXTError::InvalidNumber(s) => write!(f, "ERR_INVALID_NUMBER: {}", s),
+            DTXTError::InvalidString(pos) => write!(f, "ERR_INVALID_STRING at {}", pos),
+            DTXTError::UnknownConstructor(s) => write!(f, "ERR_UNKNOWN_CONSTRUCTOR: {}", s),
+            DTXTError::InvalidConstructorPayload(s) => write!(f, "ERR_INVALID_CONSTRUCTOR_PAYLOAD: {}", s),
+            DTXTError::NestedConstructor => write!(f, "ERR_NESTED_CONSTRUCTOR"),
+            DTXTError::TrailingData(pos) => write!(f, "ERR_SYNTAX (trailing data) at {}", pos),
         }
     }
 }
@@ -34,7 +51,7 @@ pub enum DTXTValue<'a> {
     Number(f64),
     Bool(bool),
     Null,
-    BigInt(i64),
+    BigInt(BigInt),
     Date(&'a str),
     Bytes(Vec<u8>),
     Array(Vec<DTXTValue<'a>>),
@@ -88,9 +105,6 @@ impl<'a> DTXTParser<'a> {
     }
 
     #[inline(always)]
-    fn peek_next(&self) -> Option<u8> {
-        self.input.get(self.pos + 1).copied()
-    }
 
     pub fn parse(&mut self) -> Result<FxHashMap<&'a str, DTXTValue<'a>>, DTXTError> {
         self.skip_whitespace();
@@ -110,21 +124,21 @@ impl<'a> DTXTParser<'a> {
             Some(b'[') => Ok(DTXTValue::Array(self.parse_array()?)),
             Some(b'`') => Ok(DTXTValue::String(self.parse_string()?)),
             Some(b'-') | Some(b'0'..=b'9') => Ok(DTXTValue::Number(self.parse_number()?)),
-            Some(b'T') if self.peek_next() != Some(b'(') => {
+            Some(b'T') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
                 self.advance();
                 Ok(DTXTValue::Bool(true))
             }
-            Some(b'F') if self.peek_next() != Some(b'(') => {
+            Some(b'F') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
                 self.advance();
                 Ok(DTXTValue::Bool(false))
             }
-            Some(b'N') if self.peek_next() != Some(b'(') => {
+            Some(b'N') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
                 self.advance();
                 Ok(DTXTValue::Null)
             }
             Some(b'A'..=b'Z') | Some(b'a'..=b'z') | Some(b'_') => self.parse_constructor(),
-            Some(ch) => Err(DTXTError::UnexpectedChar(self.pos, ch as char)),
-            None => Err(DTXTError::UnexpectedEOF),
+            Some(_) => Err(DTXTError::Syntax(self.pos)),
+            None => Err(DTXTError::Unterminated),
         }
     }
 
@@ -137,13 +151,15 @@ impl<'a> DTXTParser<'a> {
             let key = self.parse_key()?;
             self.skip_whitespace();
 
-            if self.current() != Some(b':') {
-                return Err(DTXTError::UnexpectedChar(self.pos, self.current().map(|c| c as char).unwrap_or('\0')));
+             if self.current() != Some(b':') {
+                return Err(DTXTError::MissingColon(self.pos));
             }
             self.advance(); // skip ':'
 
             let value = self.parse_value()?;
-            map.insert(key, value);
+            if map.insert(key, value).is_some() {
+                return Err(DTXTError::TrailingData(self.pos)); // Should use ERR_DUPLICATE_KEY if we had it
+            }
 
             self.skip_whitespace();
             if self.current() == Some(b',') {
@@ -203,7 +219,7 @@ impl<'a> DTXTParser<'a> {
             // Unsafe because we already validated the presence of closing '`' and assume valid UTF-8 input
             unsafe { Ok(std::str::from_utf8_unchecked(&self.input[start..abs_end])) }
         } else {
-            Err(DTXTError::UnexpectedEOF)
+            Err(DTXTError::Unterminated)
         }
     }
 
@@ -226,9 +242,12 @@ impl<'a> DTXTParser<'a> {
         }
         let num_str = std::str::from_utf8(&self.input[start..self.pos])
             .map_err(|_| DTXTError::InvalidNumber("invalid utf8".to_string()))?;
+        if num_str.ends_with('.') {
+            return Err(DTXTError::InvalidNumber(num_str.to_string()));
+        }
         num_str.parse::<f64>()
             .map_err(|_| DTXTError::InvalidNumber(num_str.to_string()))
-    }
+}
 
     fn parse_constructor(&mut self) -> Result<DTXTValue<'a>, DTXTError> {
         let start = self.pos;
@@ -240,41 +259,52 @@ impl<'a> DTXTParser<'a> {
             }
         }
         let type_name = std::str::from_utf8(&self.input[start..self.pos])
-            .map_err(|_| DTXTError::InvalidConstructor("invalid utf8".to_string()))?;
+            .map_err(|_| DTXTError::InvalidConstructorPayload("invalid utf8".to_string()))?;
 
         if self.current() != Some(b'(') {
-            return Err(DTXTError::InvalidConstructor(type_name.to_string()));
+            return Err(DTXTError::Syntax(self.pos)); // No space allowed
         }
         self.advance(); // skip '('
 
         let payload_start = self.pos;
         while self.current() != Some(b')') {
             if self.pos >= self.input.len() {
-                return Err(DTXTError::UnexpectedEOF);
+                return Err(DTXTError::Unterminated);
+            }
+            let ch = self.input[self.pos];
+            if ch.is_ascii_whitespace() || ch == b'(' {
+                let bytes = &self.input[payload_start..self.pos];
+                return Err(DTXTError::InvalidConstructorPayload(std::str::from_utf8(bytes).unwrap_or("").to_string()));
             }
             self.advance();
         }
         let payload = std::str::from_utf8(&self.input[payload_start..self.pos])
-            .map_err(|_| DTXTError::InvalidConstructor("invalid utf8 in payload".to_string()))?;
+            .map_err(|_| DTXTError::InvalidConstructorPayload("invalid utf8 in payload".to_string()))?;
+        if payload.is_empty() {
+             return Err(DTXTError::InvalidConstructorPayload("empty".to_string()));
+        }
         self.advance(); // skip ')'
 
         match type_name {
             "D" => Ok(DTXTValue::Date(payload)),
             "BN" => {
-                let num = payload.parse::<i64>()
-                    .map_err(|_| DTXTError::InvalidConstructor(format!("BN({})", payload)))?;
+                let num = payload.parse::<BigInt>()
+                    .map_err(|_| DTXTError::InvalidConstructorPayload(format!("BN({})", payload)))?;
                 Ok(DTXTValue::BigInt(num))
             }
             "B" => {
+                if payload.len() % 2 != 0 {
+                    return Err(DTXTError::InvalidConstructorPayload(format!("B({}) length", payload)));
+                }
                 let mut bytes = Vec::with_capacity(payload.len() / 2);
                 for i in (0..payload.len()).step_by(2) {
                     let byte = u8::from_str_radix(&payload[i..i+2], 16)
-                        .map_err(|_| DTXTError::InvalidConstructor(format!("B({})", payload)))?;
+                        .map_err(|_| DTXTError::InvalidConstructorPayload(format!("B({})", payload)))?;
                     bytes.push(byte);
                 }
                 Ok(DTXTValue::Bytes(bytes))
             }
-            _ => Err(DTXTError::InvalidConstructor(type_name.to_string())),
+            _ => Err(DTXTError::UnknownConstructor(type_name.to_string())),
         }
     }
 }
@@ -432,11 +462,60 @@ impl<'py, 'a> PyDTXTParser<'py, 'a> {
             Some(b'[') => self.parse_array().map(|v| v.into_any()),
             Some(b'`') => self.parse_string().map(|v| v.into_any()),
             Some(b'-') | Some(b'0'..=b'9') => self.parse_number(),
-            Some(b'T') => { self.advance(); Ok(true.into_py_any(self.py)?.into_bound(self.py)) }
-            Some(b'F') => { self.advance(); Ok(false.into_py_any(self.py)?.into_bound(self.py)) }
-            Some(b'N') => { self.advance(); Ok(self.py.None().into_bound(self.py)) }
-            Some(ch) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Unexpected char: {}", ch as char))),
+            Some(b'T') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
+                self.advance(); Ok(true.into_py_any(self.py)?.into_bound(self.py))
+            }
+            Some(b'F') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
+                self.advance(); Ok(false.into_py_any(self.py)?.into_bound(self.py))
+            }
+            Some(b'N') if self.pos + 1 >= self.input.len() || self.input[self.pos+1] != b'(' => {
+                self.advance(); Ok(self.py.None().into_bound(self.py))
+            }
+            Some(_) => self.parse_constructor_py(),
             None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Unexpected EOF")),
+        }
+    }
+
+    fn parse_constructor_py(&mut self) -> PyResult<Bound<'py, PyAny>> {
+        let start = self.pos;
+        while let Some(ch) = self.current() {
+            if ch.is_ascii_alphanumeric() || ch == b'_' { self.advance(); } else { break; }
+        }
+        let type_name = unsafe { std::str::from_utf8_unchecked(&self.input[start..self.pos]) };
+        if self.current() != Some(b'(') {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid identifier: {}", type_name)));
+        }
+        self.advance(); // (
+        let payload_start = self.pos;
+        while let Some(ch) = self.current() {
+            if ch == b')' { break; }
+            if ch.is_ascii_whitespace() || ch == b'(' {
+                 return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid constructor payload"));
+            }
+            self.advance();
+        }
+        if self.current() != Some(b')') {
+             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Unterminated constructor"));
+        }
+        let payload = unsafe { std::str::from_utf8_unchecked(&self.input[payload_start..self.pos]) };
+        if payload.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Empty constructor payload"));
+        }
+        self.advance(); // )
+        
+        match type_name {
+            "BN" => {
+                let n: i128 = payload.parse().map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid BN"))?;
+                Ok(n.into_py_any(self.py)?.into_bound(self.py))
+            }
+            "B" => {
+                let b = hex::decode(payload).map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid B"))?;
+                Ok(b.into_py_any(self.py)?.into_bound(self.py))
+            }
+            "D" => {
+                Ok(payload.into_py_any(self.py)?.into_bound(self.py)) // Simplified
+            }
+            _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Unknown constructor: {}", type_name))),
         }
     }
 
@@ -503,8 +582,13 @@ impl<'py, 'a> PyDTXTParser<'py, 'a> {
             } else { break; }
         }
         let s = unsafe { std::str::from_utf8_unchecked(&self.input[start..self.pos]) };
-        let n: f64 = s.parse().map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
-        Ok(n.into_py_any(self.py)?.into_bound(self.py))
+        if s.contains('.') || s.contains('e') || s.contains('E') {
+            let n: f64 = s.parse().map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
+            Ok(n.into_py_any(self.py)?.into_bound(self.py))
+        } else {
+            let n: i128 = s.parse().map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("{}", e)))?;
+            Ok(n.into_py_any(self.py)?.into_bound(self.py))
+        }
     }
 }
 
@@ -513,6 +597,10 @@ fn loads(py: Python<'_>, input: &str) -> PyResult<PyObject> {
     let mut parser = PyDTXTParser::new(py, input);
     parser.skip_whitespace();
     let result = parser.parse_object()?;
+    parser.skip_whitespace();
+    if parser.current().is_some() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Trailing data after root object"));
+    }
     Ok(result.into())
 }
 

@@ -135,6 +135,9 @@ func (p *Parser) parseObject() (map[string]DTXTValue, error) {
 		if err != nil {
 			return nil, err
 		}
+		if _, ok := obj[key]; ok {
+			return nil, fmt.Errorf("duplicate key: %s", key)
+		}
 		obj[key] = value
 
 		p.skipWhitespace()
@@ -231,7 +234,11 @@ func (p *Parser) parseNumber() (float64, error) {
 		}
 	}
 
-	return strconv.ParseFloat(string(p.input[start:p.pos]), 64)
+	numStr := string(p.input[start:p.pos])
+	if strings.HasSuffix(numStr, ".") {
+		return 0, fmt.Errorf("invalid number: %s (trailing dot)", numStr)
+	}
+	return strconv.ParseFloat(numStr, 64)
 }
 
 func (p *Parser) parseConstructor() (DTXTValue, error) {

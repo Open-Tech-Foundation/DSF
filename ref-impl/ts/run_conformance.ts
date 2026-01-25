@@ -1,7 +1,11 @@
-import * as dtxt from './dtxt';
+import * as dtxt from './dtxt.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as assert from 'assert';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const TESTS_PATH = path.join(__dirname, '../../tests/conformance/tests.json');
 const tests = JSON.parse(fs.readFileSync(TESTS_PATH, 'utf-8'));
