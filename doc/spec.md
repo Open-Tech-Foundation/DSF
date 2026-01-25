@@ -318,7 +318,7 @@ BN(9007199254740993)
 
 Rules:
 
-* Payload MUST match: `^-?[0-9]+$`
+* Payload MUST match: `^[+-]?[0-9]+$`
 * Represents an exact arbitrary-precision integer
 
 Canonicalization:
@@ -337,6 +337,7 @@ B(89504E470D0A1A0A)
 Rules:
 
 * Payload MUST be hexadecimal digits
+* Payload length **MUST** be even (representing full bytes)
 * Case-insensitive input
 * Canonical output MUST use uppercase hex
 
@@ -371,7 +372,7 @@ A Canonical DTXT document **MUST**:
 4.  **Constructor Payloads**:
     *   `BN(...)`: Remove leading zeros and `+` signs. `BN(-0)` MUST become `BN(0)`.
     *   `B(...)`: Use uppercase hex digits.
-5.  **Key Sorting**: Keys within an object **SHOULD** be sorted lexicographically by their UTF-8 byte values (optional but recommended for strictly reproducible output).
+5.  **Key Sorting**: Keys within an object **MUST** be sorted lexicographically by their UTF-8 byte values for strictly reproducible output.
 
 ---
 

@@ -21,7 +21,7 @@ To provide consistent feedback across different implementations, DTXT parsers SH
 
 ## Constructor Errors
 - **`ERR_UNKNOWN_CONSTRUCTOR`**: Constructor name (e.g., `XYZ(...)`) is not defined in the standard.
-- **`ERR_INVALID_CONSTRUCTOR_PAYLOAD`**: The payload inside `(...)` does not match the requirements for that specific type.
+- **`ERR_INVALID_CONSTRUCTOR_PAYLOAD`**: The payload inside `(...)` does not match the requirements for that specific type (e.g., non-numeric characters in `BN()`, or **odd-length hexadecimal string** in `B()`).
 - **`ERR_NESTED_CONSTRUCTOR`**: A constructor literal was found inside the payload of another constructor.
 
 ## Resource Limits
