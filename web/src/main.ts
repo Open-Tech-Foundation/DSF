@@ -5,7 +5,7 @@ import jsyaml from 'js-yaml';
 import JSON5 from 'json5';
 import * as TOML from 'smol-toml';
 import * as fxp from 'fast-xml-parser';
-import msgpack from 'msgpack-lite';
+import { encode as msgpackEncode } from '@msgpack/msgpack';
 import * as CBOR from 'cbor-js';
 
 const SAMPLES = {
@@ -235,8 +235,8 @@ const Handlers: Record<string, { serialize: (obj: any) => string, parse?: (text:
   },
   msgpack: {
     serialize: (obj) => {
-      const buffer = msgpack.encode(prepareForSerialization(obj));
-      return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+      const uint8 = msgpackEncode(prepareForSerialization(obj));
+      return Array.from(uint8).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
     }
     // Bidirectional for binary is complex in a text area, keeping one-way for now as per plan
   },
